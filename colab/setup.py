@@ -1,11 +1,13 @@
 """Colab bootstrap for INF8225 polyp segmentation project.
 
 Called from the first cell of each notebook. No-op when not on Colab.
-Mounts Drive, installs minimal deps, and symlinks heavy assets from Drive
-into the paths the notebooks already use (data/, work_dirs/, MedSAM/work_dir/).
+Mounts Drive, installs MM* deps (without ever triggering a source build),
+and symlinks heavy assets from Drive into the paths the notebooks use.
 """
 from __future__ import annotations
 
+import importlib
+import importlib.util
 import os
 import subprocess
 import sys
@@ -72,11 +74,11 @@ def _find_drive_folder(explicit: str | None) -> Path:
     )
 
 
-def _run(cmd: list[str], desc: str) -> None:
-    """Run a subprocess; on failure, surface the tail of stdout/stderr (which mim/pip -q swallow)."""
+def _run(cmd: list[str], desc: str, check: bool = True) -> subprocess.CompletedProcess:
+    """Run a subprocess; on failure, surface the tail of stdout/stderr."""
     print(f"→ {desc}")
     proc = subprocess.run(cmd, capture_output=True, text=True)
-    if proc.returncode != 0:
+    if proc.returncode != 0 and check:
         tail_out = "\n".join((proc.stdout or "").splitlines()[-40:])
         tail_err = "\n".join((proc.stderr or "").splitlines()[-40:])
         raise RuntimeError(
@@ -84,56 +86,135 @@ def _run(cmd: list[str], desc: str) -> None:
             f"--- stdout (last 40 lines) ---\n{tail_out}\n"
             f"--- stderr (last 40 lines) ---\n{tail_err}\n"
         )
+    return proc
 
 
-def _install_deps(reinstall: bool = False) -> None:
-    if not reinstall:
-        try:
-            import mmdet, mmcv, transformers  # noqa: F401
-            print("✓ deps already installed, skipping")
-            return
-        except ImportError:
-            pass
-
-    pip = [sys.executable, "-m", "pip", "install", "-q"]
-
-    # Colab Python 3.12 ships a setuptools whose pkg_resources uses the
-    # removed pkgutil.ImpImporter. Any tool that imports setuptools crashes.
-    # Force-reinstall to overwrite it; plain -U skips because pip considers
-    # the pinned-by-Colab version "already up to date".
-    _run(pip + ["--force-reinstall", "-U", "setuptools>=70", "wheel"],
-         "setuptools / wheel (Py 3.12 fix)")
-
-    # mmengine and mmdet are pure-Python — pip direct is simpler and avoids
-    # openmim, which is itself broken by the setuptools issue above.
-    _run(pip + ["mmengine==0.10.7"], "mmengine==0.10.7")
-
-    # mmcv has compiled CUDA ops → prefer a pre-built wheel matching Colab's torch.
-    index = _mmcv_wheel_index()
-    if index is not None:
-        _run(pip + ["mmcv==2.1.0", "-f", index],
-             f"mmcv==2.1.0 (prebuilt wheel @ {index})")
-    else:
-        _run(pip + ["mmcv==2.1.0"], "mmcv==2.1.0 (source build, slow)")
-
-    _run(pip + ["mmdet==3.3.0"], "mmdet==3.3.0")
-
-    reqs = Path(__file__).resolve().parent / "requirements-colab.txt"
-    _run(pip + ["-r", str(reqs)], "extras (transformers, nltk, ...)")
-
-
-def _mmcv_wheel_index() -> str | None:
-    """OpenMMLab prebuilt-wheel index matching Colab's torch/CUDA, or None."""
+def _torch_meta() -> tuple[str, str] | None:
+    """Return ('<maj>.<min>', 'cuNNN') for current torch build, or None."""
     try:
         import torch
     except ImportError:
         return None
-    t = ".".join(torch.__version__.split("+")[0].split(".")[:2])  # "2.5"
+    mm = ".".join(torch.__version__.split("+")[0].split(".")[:2])
     cu = getattr(torch.version, "cuda", None)
     if not cu:
         return None
-    cu_tag = "cu" + cu.replace(".", "")[:3]  # "121" / "124"
-    return f"https://download.openmmlab.com/mmcv/dist/{cu_tag}/torch{t}/index.html"
+    return mm, "cu" + cu.replace(".", "")[:3]
+
+
+def _deps_installed() -> bool:
+    """True iff every MM* package imports AND mmcv's CUDA ops load."""
+    try:
+        for pkg in ("mmengine", "mmcv", "mmdet", "transformers"):
+            importlib.import_module(pkg)
+        from mmcv.ops import nms  # noqa: F401  triggers _ext import
+        return True
+    except Exception:
+        return False
+
+
+def _install_mmcv(pip: list[str]) -> str:
+    """Install mmcv from a prebuilt wheel only (never source build).
+
+    Returns the version string that was installed (e.g. "2.2.0").
+
+    Strategy:
+      - on py≤3.11, prefer the strictly-compatible mmcv 2.1.0 wheel
+      - on py3.12+, OpenMMLab only ships mmcv ≥2.2.0 wheels; we install
+        mmcv 2.2.x and patch mmdet's version ceiling afterwards
+      - walk down a list of torch tags so minor torch/mmcv ABI skew is handled
+    """
+    meta = _torch_meta()
+    if meta is None:
+        raise RuntimeError(
+            "CUDA-enabled torch not detected. Switch Colab runtime to a GPU "
+            "(Runtime → Change runtime type → T4/A100/L4)."
+        )
+    torch_mm, cu = meta
+
+    candidates: list[tuple[str, str]] = []
+    if sys.version_info < (3, 12):
+        for t in (torch_mm, "2.1", "2.0"):
+            candidates.append(("2.1.0", t))
+    # mmcv 2.2.0 ships cp312 wheels for torch 2.1 → 2.4.
+    for t in (torch_mm, "2.4", "2.3", "2.2", "2.1"):
+        candidates.append(("2.2.0", t))
+
+    tried: list[str] = []
+    for ver, torch_tag in candidates:
+        url = f"https://download.openmmlab.com/mmcv/dist/{cu}/torch{torch_tag}.0/index.html"
+        label = f"mmcv=={ver} (torch{torch_tag}/{cu})"
+        tried.append(label)
+        proc = _run(
+            pip + [f"mmcv=={ver}", "-f", url, "--only-binary", "mmcv"],
+            f"try {label}",
+            check=False,
+        )
+        if proc.returncode == 0:
+            return ver
+
+    raise RuntimeError(
+        "No prebuilt mmcv wheel matched this runtime.\n"
+        "Tried:\n  - " + "\n  - ".join(tried) + "\n"
+        "Workarounds:\n"
+        "  - Runtime → Restart session (Colab may have switched torch/CUDA)\n"
+        "  - or pin torch first:  !pip install -q torch==2.4.0 torchvision==0.19.0 "
+        "--index-url https://download.pytorch.org/whl/cu121\n"
+        "  - then rerun this cell."
+    )
+
+
+def _patch_mmdet_mmcv_ceiling(installed_mmcv: str) -> None:
+    """mmdet 3.3.0 asserts `mmcv < 2.2.0` at import. Bump the ceiling when needed."""
+    if installed_mmcv.startswith("2.1."):
+        return
+    spec = importlib.util.find_spec("mmdet")
+    if spec is None or spec.origin is None:
+        return
+    init = Path(spec.origin)
+    src = init.read_text()
+    patched = src.replace(
+        "mmcv_maximum_version = '2.2.0'",
+        "mmcv_maximum_version = '3.0.0'",
+    )
+    if patched != src:
+        init.write_text(patched)
+        print(f"✓  patched mmdet ceiling → accepts mmcv {installed_mmcv}")
+
+
+def _install_deps(reinstall: bool = False) -> None:
+    if not reinstall and _deps_installed():
+        print("✓ deps already installed, skipping")
+        return
+
+    pip = [sys.executable, "-m", "pip", "install", "-q"]
+
+    # Colab's Py 3.12 ships a setuptools whose pkg_resources uses
+    # pkgutil.ImpImporter (removed in 3.12). Force-reinstall to overwrite it.
+    _run(
+        pip + ["--force-reinstall", "--no-deps", "-U", "setuptools>=70", "wheel"],
+        "setuptools / wheel (Py 3.12 fix)",
+    )
+
+    _run(pip + ["mmengine==0.10.7"], "mmengine==0.10.7")
+
+    installed_mmcv = _install_mmcv(pip)
+
+    # --no-deps: mmdet's setup.py pins mmcv<2.2.0, which would make the resolver
+    # fight us on Py 3.12. We install mmdet alone, then handle its runtime deps.
+    _run(pip + ["--no-deps", "mmdet==3.3.0"], "mmdet==3.3.0 (no-deps)")
+    _patch_mmdet_mmcv_ceiling(installed_mmcv)
+    _run(
+        pip + [
+            "pycocotools", "shapely", "terminaltables", "tabulate",
+            "scipy", "matplotlib",
+        ],
+        "mmdet runtime deps",
+    )
+
+    reqs = Path(__file__).resolve().parent / "requirements-colab.txt"
+    if reqs.exists():
+        _run(pip + ["-r", str(reqs)], "project extras (transformers, nltk, …)")
 
 
 def _link(local: Path, target: Path) -> None:
