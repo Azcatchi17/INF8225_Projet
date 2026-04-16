@@ -1,0 +1,14 @@
+# Minimal deps for running the project notebooks on Google Colab.
+# Colab already ships torch, torchvision, numpy, pandas, matplotlib,
+# scikit-image, scikit-learn, opencv-python, Pillow, tqdm.
+# mmengine / mmcv / mmdet are installed separately via `mim` (see colab/setup.py)
+# because mim picks the wheel matching Colab's torch/cuda.
+transformers==4.33.0
+tokenizers==0.13.3
+nltk
+pycocotools
+fairscale
+addict
+yapf
+shapely
+terminaltables
