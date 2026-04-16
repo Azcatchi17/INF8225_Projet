@@ -1,0 +1,19 @@
+# Données et masques
+data/
+
+# Dossiers de travail et résultats d'entraînement
+work_dirs/
+
+# Poids des modèles
+*.pth
+*.pth.tar
+*.ckpt
+
+# Environnement virtuel
+.venv/
+
+# Cache et fichiers temporaires
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
