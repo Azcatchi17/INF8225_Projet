@@ -98,6 +98,9 @@ def _install_deps(reinstall: bool = False) -> None:
     pip = [sys.executable, "-m", "pip", "install", "-q"]
     mim = [sys.executable, "-m", "mim", "install", "-q"]
 
+    # Python 3.12 on Colab ships an old setuptools whose pkg_resources uses the
+    # removed pkgutil.ImpImporter — mim crashes on import without this upgrade.
+    _run(pip + ["-U", "setuptools", "wheel"], "setuptools / wheel (Py 3.12 fix)")
     _run(pip + ["-U", "openmim"], "openmim")
     _run(mim + ["mmengine==0.10.7"], "mmengine==0.10.7")
     _run(mim + ["mmcv==2.1.0"], "mmcv==2.1.0")
