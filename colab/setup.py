@@ -273,15 +273,6 @@ def _install_deps(reinstall: bool = False) -> None:
     )
 
     _ensure_torch_stack(pip, stack)
-    _run(
-        pip
-        + [
-            "--force-reinstall",
-            "--no-cache-dir",
-            *(f"{pkg}=={version}" for pkg, version in SCIENTIFIC_STACK.items()),
-        ],
-        "numpy / scipy / matplotlib",
-    )
     _run(pip + [f"mmengine=={MM_RUNTIME['mmengine']}"], f"mmengine=={MM_RUNTIME['mmengine']}")
 
     installed_mmcv = _install_mmcv(pip, stack)
@@ -303,6 +294,19 @@ def _install_deps(reinstall: bool = False) -> None:
     reqs = Path(__file__).resolve().parent / "requirements-colab.txt"
     if reqs.exists():
         _run(pip + ["-r", str(reqs)], "project extras (transformers, nltk, …)")
+
+    # Pin scientific stack LAST so nothing above (pycocotools, transformers,
+    # fairscale, …) can pull numpy 2.x back in and leave the env in a
+    # partial-upgrade state that breaks `from scipy.sparse import csr_matrix`.
+    _run(
+        pip
+        + [
+            "--force-reinstall",
+            "--no-cache-dir",
+            *(f"{pkg}=={version}" for pkg, version in SCIENTIFIC_STACK.items()),
+        ],
+        "numpy / scipy / matplotlib (pinned last)",
+    )
 
 
 def _link(local: Path, target: Path) -> None:
