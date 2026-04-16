@@ -296,12 +296,19 @@ def _install_deps(reinstall: bool = False) -> None:
         _run(pip + ["-r", str(reqs)], "project extras (transformers, nltk, …)")
 
     # Pin scientific stack LAST so nothing above (pycocotools, transformers,
-    # fairscale, …) can pull numpy 2.x back in and leave the env in a
-    # partial-upgrade state that breaks `from scipy.sparse import csr_matrix`.
+    # fairscale, …) can pull numpy 2.x back in. Uninstall first because
+    # `--force-reinstall` alone can leave stale .so files from numpy 2.x next
+    # to 1.26.4 .py files, yielding `numpy.dtype size changed (expected 96,
+    # got 88)` — a 2.x-vs-1.x ABI mismatch inside numpy itself.
+    pip_uninstall = [sys.executable, "-m", "pip", "uninstall", "-y", "-q"]
+    _run(
+        pip_uninstall + list(SCIENTIFIC_STACK.keys()),
+        "remove stale numpy / scipy / matplotlib",
+        check=False,
+    )
     _run(
         pip
         + [
-            "--force-reinstall",
             "--no-cache-dir",
             *(f"{pkg}=={version}" for pkg, version in SCIENTIFIC_STACK.items()),
         ],
