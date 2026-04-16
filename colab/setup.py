@@ -6,7 +6,6 @@ from Drive into the paths the notebooks use.
 """
 from __future__ import annotations
 
-import importlib
 import importlib.util
 from importlib import metadata
 import os
@@ -69,6 +68,20 @@ SUPPORTED_STACKS = {
             "https://download.openmmlab.com/mmcv/dist/cpu/torch2.3.0/index.html"
         ),
     },
+}
+
+# Keep the scientific Python stack deterministic on Colab. Newer base images can
+# otherwise pull in a NumPy/SciPy pair that is import-incompatible with MMDetection
+# in the same runtime, especially after partial in-session upgrades.
+SCIENTIFIC_STACK = {
+    "numpy": "1.26.4",
+    "scipy": "1.13.1",
+    "matplotlib": "3.8.4",
+}
+
+MM_RUNTIME = {
+    "mmengine": "0.10.7",
+    "mmdet": "3.3.0",
 }
 
 
@@ -145,6 +158,14 @@ def _torch_stack_matches(stack: dict[str, str]) -> bool:
     )
 
 
+def _versions_match(required: dict[str, str]) -> bool:
+    versions = {pkg: _dist_version(pkg) for pkg in required}
+    return all(
+        versions[pkg] is not None and versions[pkg].startswith(required[pkg])
+        for pkg in required
+    )
+
+
 def _ensure_torch_stack(pip: list[str], stack: dict[str, str]) -> None:
     if _torch_stack_matches(stack):
         print(f"✓ torch stack already compatible ({stack['label']})")
@@ -171,15 +192,36 @@ def _ensure_torch_stack(pip: list[str], stack: dict[str, str]) -> None:
     )
 
 
-def _deps_installed() -> bool:
-    """True iff every MM* package imports AND mmcv's CUDA ops load."""
-    try:
-        for pkg in ("mmengine", "mmcv", "mmdet", "transformers"):
-            importlib.import_module(pkg)
-        from mmcv.ops import nms  # noqa: F401  triggers _ext import
-        return True
-    except Exception:
+def _deps_installed(stack: dict[str, str]) -> bool:
+    """True iff the pinned stack is present and deep MMDetection imports work."""
+    required = {
+        **SCIENTIFIC_STACK,
+        **MM_RUNTIME,
+        "mmcv": stack["mmcv"],
+    }
+    if not _versions_match(required):
         return False
+
+    probe = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import importlib;"
+                "importlib.import_module('transformers');"
+                "from mmdet.apis import init_detector, inference_detector;"
+                "from mmdet.utils import register_all_modules;"
+                "from mmcv.ops import nms;"
+                "from scipy.sparse import csr_matrix"
+            ),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if probe.returncode != 0:
+        print("↺ existing MMDetection imports failed, reinstalling pinned deps")
+        return False
+    return True
 
 
 def _install_mmcv(pip: list[str], stack: dict[str, str]) -> str:
@@ -216,12 +258,12 @@ def _patch_mmdet_mmcv_ceiling(installed_mmcv: str) -> None:
 
 
 def _install_deps(reinstall: bool = False) -> None:
-    if not reinstall and _deps_installed():
-        print("✓ deps already installed, skipping")
-        return
-
     pip = [sys.executable, "-m", "pip", "install", "-q"]
     stack = _target_stack()
+
+    if not reinstall and _deps_installed(stack):
+        print("✓ deps already installed, skipping")
+        return
 
     # Colab's Py 3.12 ships a setuptools whose pkg_resources uses
     # pkgutil.ImpImporter (removed in 3.12). Force-reinstall to overwrite it.
@@ -231,18 +273,29 @@ def _install_deps(reinstall: bool = False) -> None:
     )
 
     _ensure_torch_stack(pip, stack)
-    _run(pip + ["mmengine==0.10.7"], "mmengine==0.10.7")
+    _run(
+        pip
+        + [
+            "--force-reinstall",
+            "--no-cache-dir",
+            *(f"{pkg}=={version}" for pkg, version in SCIENTIFIC_STACK.items()),
+        ],
+        "numpy / scipy / matplotlib",
+    )
+    _run(pip + [f"mmengine=={MM_RUNTIME['mmengine']}"], f"mmengine=={MM_RUNTIME['mmengine']}")
 
     installed_mmcv = _install_mmcv(pip, stack)
 
     # --no-deps: mmdet's setup.py pins mmcv<2.2.0, which would make the resolver
     # fight us on Py 3.12. We install mmdet alone, then handle its runtime deps.
-    _run(pip + ["--no-deps", "mmdet==3.3.0"], "mmdet==3.3.0 (no-deps)")
+    _run(
+        pip + ["--no-deps", f"mmdet=={MM_RUNTIME['mmdet']}"],
+        f"mmdet=={MM_RUNTIME['mmdet']} (no-deps)",
+    )
     _patch_mmdet_mmcv_ceiling(installed_mmcv)
     _run(
         pip + [
             "pycocotools", "shapely", "terminaltables", "tabulate",
-            "scipy", "matplotlib",
         ],
         "mmdet runtime deps",
     )
@@ -289,7 +342,11 @@ def _print_summary(project_root: Path, drive_root: Path) -> None:
     print(f"Torch   : {torch_version}")
 
 
-def setup(drive_folder: str | None = None, install: bool = True) -> None:
+def setup(
+    drive_folder: str | None = None,
+    install: bool = True,
+    reinstall: bool = False,
+) -> None:
     """Run once per Colab session at the top of a notebook."""
     if not is_colab():
         print("Not running in Colab — setup skipped.")
@@ -304,7 +361,7 @@ def setup(drive_folder: str | None = None, install: bool = True) -> None:
 
     _mount_drive()
     if install:
-        _install_deps()
+        _install_deps(reinstall=reinstall)
 
     drive_root = _find_drive_folder(drive_folder)
     _make_output_dirs(drive_root)

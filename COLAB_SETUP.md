@@ -55,9 +55,25 @@ The bootstrap cell at the top of each Colab-ready notebook:
 2. Pins Colab to a known-good PyTorch stack supported by OpenMMLab:
    - GPU runtime: `torch==2.4.0`, `torchvision==0.19.0`, `torchaudio==2.4.0` from the `cu121` wheels
    - CPU runtime: `torch==2.3.1`, `torchvision==0.18.1`, `torchaudio==2.3.1`
-3. Installs `mmengine==0.10.7`, `mmcv==2.2.0`, and `mmdet==3.3.0` from prebuilt wheels only.
-4. Installs the small extras from `colab/requirements-colab.txt` (`transformers`, `nltk`, `pycocotools`, ...).
-5. Mounts Drive, locates the project folder, creates symlinks so the notebook code (which uses paths like `data/Kvasir-SEG/...` and `work_dirs/polyp_config/...`) finds everything on Drive unchanged.
+3. Pins the scientific stack to known-good versions for Colab Py 3.12:
+   - `numpy==1.26.4`
+   - `scipy==1.13.1`
+   - `matplotlib==3.8.4`
+4. Installs `mmengine==0.10.7`, `mmcv==2.2.0`, and `mmdet==3.3.0` from prebuilt wheels only.
+5. Installs the small extras from `colab/requirements-colab.txt` (`transformers`, `nltk`, `pycocotools`, ...).
+6. Mounts Drive, locates the project folder, creates symlinks so the notebook code (which uses paths like `data/Kvasir-SEG/...` and `work_dirs/polyp_config/...`) finds everything on Drive unchanged.
+
+## Repairing a stale Colab runtime
+
+If a previous session left `numpy` / `scipy` in a bad state and the notebook still fails on
+`from mmdet.apis import init_detector, inference_detector`, force a clean reinstall once:
+
+```python
+from colab.setup import setup
+setup(reinstall=True)
+```
+
+If `torch` was already imported before the bootstrap cell ran, restart the runtime first, then rerun the first cell.
 
 ## 4. Outputs persist on Drive automatically
 
