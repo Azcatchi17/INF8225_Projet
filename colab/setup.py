@@ -296,23 +296,32 @@ def _install_deps(reinstall: bool = False) -> None:
         _run(pip + ["-r", str(reqs)], "project extras (transformers, nltk, …)")
 
     # Pin scientific stack LAST so nothing above (pycocotools, transformers,
-    # fairscale, …) can pull numpy 2.x back in. Uninstall first because
-    # `--force-reinstall` alone can leave stale .so files from numpy 2.x next
-    # to 1.26.4 .py files, yielding `numpy.dtype size changed (expected 96,
-    # got 88)` — a 2.x-vs-1.x ABI mismatch inside numpy itself.
+    # fairscale, …) can pull numpy 2.x back in. `pip uninstall` alone can
+    # leave stale .so files from a broken 2.x install next to 1.26.4 .py
+    # files, yielding `numpy.dtype size changed (expected 96, got 88)` — a
+    # 2.x-vs-1.x ABI mismatch inside numpy itself. Nuke the package dirs
+    # outright so the reinstall starts from a clean slate.
     pip_uninstall = [sys.executable, "-m", "pip", "uninstall", "-y", "-q"]
     _run(
         pip_uninstall + list(SCIENTIFIC_STACK.keys()),
         "remove stale numpy / scipy / matplotlib",
         check=False,
     )
+    import site
+    import shutil
+    for pkg_name in SCIENTIFIC_STACK:
+        for site_dir in site.getsitepackages():
+            pkg_path = Path(site_dir) / pkg_name
+            if pkg_path.exists():
+                shutil.rmtree(pkg_path, ignore_errors=True)
+                print(f"  rm -rf {pkg_path}")
     _run(
         pip
         + [
             "--no-cache-dir",
             *(f"{pkg}=={version}" for pkg, version in SCIENTIFIC_STACK.items()),
         ],
-        "numpy / scipy / matplotlib (pinned last)",
+        "numpy / scipy / matplotlib (pinned last, clean install)",
     )
 
 
@@ -382,11 +391,30 @@ def setup(
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
 
-    try:
-        import nltk
-        nltk.download("punkt_tab", quiet=True)
-        nltk.download("averaged_perceptron_tagger_eng", quiet=True)
-    except ImportError:
-        pass
+    # Run nltk downloads in a subprocess: if the kernel already had numpy
+    # preloaded (Colab's default), the in-memory numpy can mismatch the
+    # freshly-installed on-disk numpy ABI. A subprocess uses the clean
+    # on-disk install and can't propagate ValueError into setup().
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import nltk;"
+                "nltk.download('punkt_tab', quiet=True);"
+                "nltk.download('averaged_perceptron_tagger_eng', quiet=True)"
+            ),
+        ],
+        check=False,
+    )
 
     _print_summary(project_root, drive_root)
+
+    # If numpy was imported before setup reinstalled it, the kernel still has
+    # the stale module and the next `import mmdet` will fail with an ABI
+    # ValueError. Warn loudly so the user restarts before continuing.
+    if install and "numpy" in sys.modules:
+        print()
+        print("⚠  numpy was already loaded in this kernel before setup reinstalled it.")
+        print("   Runtime → Restart session, then run your imports again")
+        print("   (no need to rerun setup — deps are pinned on disk).")
