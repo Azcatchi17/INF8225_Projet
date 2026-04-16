@@ -1,13 +1,14 @@
 """Colab bootstrap for INF8225 polyp segmentation project.
 
 Called from the first cell of each notebook. No-op when not on Colab.
-Mounts Drive, installs MM* deps (without ever triggering a source build),
-and symlinks heavy assets from Drive into the paths the notebooks use.
+Mounts Drive, pins a known-good OpenMMLab stack, and symlinks heavy assets
+from Drive into the paths the notebooks use.
 """
 from __future__ import annotations
 
 import importlib
 import importlib.util
+from importlib import metadata
 import os
 import subprocess
 import sys
@@ -41,6 +42,34 @@ OUTPUT_SUBDIRS = [
     "data/results",
     "work_dirs/polyp_config",
 ]
+
+# Colab's preinstalled torch can jump ahead of OpenMMLab wheel support
+# (for example, torch 2.10 + CUDA 12.8). Installing a known-good stack is
+# more reliable than trying to match whatever Colab happened to ship today.
+SUPPORTED_STACKS = {
+    "gpu": {
+        "label": "GPU / CUDA 12.1",
+        "torch": "2.4.0",
+        "torchvision": "0.19.0",
+        "torchaudio": "2.4.0",
+        "torch_index": "https://download.pytorch.org/whl/cu121",
+        "mmcv": "2.2.0",
+        "mmcv_index": (
+            "https://download.openmmlab.com/mmcv/dist/cu121/torch2.4.0/index.html"
+        ),
+    },
+    "cpu": {
+        "label": "CPU",
+        "torch": "2.3.1",
+        "torchvision": "0.18.1",
+        "torchaudio": "2.3.1",
+        "torch_index": "https://download.pytorch.org/whl/cpu",
+        "mmcv": "2.2.0",
+        "mmcv_index": (
+            "https://download.openmmlab.com/mmcv/dist/cpu/torch2.3.0/index.html"
+        ),
+    },
+}
 
 
 def is_colab() -> bool:
@@ -89,17 +118,57 @@ def _run(cmd: list[str], desc: str, check: bool = True) -> subprocess.CompletedP
     return proc
 
 
-def _torch_meta() -> tuple[str, str] | None:
-    """Return ('<maj>.<min>', 'cuNNN') for current torch build, or None."""
+def _dist_version(name: str) -> str | None:
     try:
-        import torch
-    except ImportError:
+        return metadata.version(name)
+    except metadata.PackageNotFoundError:
         return None
-    mm = ".".join(torch.__version__.split("+")[0].split(".")[:2])
-    cu = getattr(torch.version, "cuda", None)
-    if not cu:
-        return None
-    return mm, "cu" + cu.replace(".", "")[:3]
+
+
+def _has_gpu() -> bool:
+    return _run(["nvidia-smi", "-L"], "detect GPU", check=False).returncode == 0
+
+
+def _target_stack() -> dict[str, str]:
+    return SUPPORTED_STACKS["gpu" if _has_gpu() else "cpu"]
+
+
+def _torch_stack_matches(stack: dict[str, str]) -> bool:
+    versions = {
+        "torch": _dist_version("torch"),
+        "torchvision": _dist_version("torchvision"),
+        "torchaudio": _dist_version("torchaudio"),
+    }
+    return all(
+        versions[pkg] is not None and versions[pkg].startswith(stack[pkg])
+        for pkg in versions
+    )
+
+
+def _ensure_torch_stack(pip: list[str], stack: dict[str, str]) -> None:
+    if _torch_stack_matches(stack):
+        print(f"✓ torch stack already compatible ({stack['label']})")
+        return
+
+    if "torch" in sys.modules:
+        raise RuntimeError(
+            "torch was imported before setup() could pin a compatible stack.\n"
+            "Restart the Colab runtime, then rerun the first notebook cell."
+        )
+
+    _run(
+        pip
+        + [
+            "--force-reinstall",
+            "--no-cache-dir",
+            "--index-url",
+            stack["torch_index"],
+            f"torch=={stack['torch']}",
+            f"torchvision=={stack['torchvision']}",
+            f"torchaudio=={stack['torchaudio']}",
+        ],
+        f"torch stack ({stack['label']})",
+    )
 
 
 def _deps_installed() -> bool:
@@ -113,55 +182,19 @@ def _deps_installed() -> bool:
         return False
 
 
-def _install_mmcv(pip: list[str]) -> str:
-    """Install mmcv from a prebuilt wheel only (never source build).
-
-    Returns the version string that was installed (e.g. "2.2.0").
-
-    Strategy:
-      - on py≤3.11, prefer the strictly-compatible mmcv 2.1.0 wheel
-      - on py3.12+, OpenMMLab only ships mmcv ≥2.2.0 wheels; we install
-        mmcv 2.2.x and patch mmdet's version ceiling afterwards
-      - walk down a list of torch tags so minor torch/mmcv ABI skew is handled
-    """
-    meta = _torch_meta()
-    if meta is None:
-        raise RuntimeError(
-            "CUDA-enabled torch not detected. Switch Colab runtime to a GPU "
-            "(Runtime → Change runtime type → T4/A100/L4)."
-        )
-    torch_mm, cu = meta
-
-    candidates: list[tuple[str, str]] = []
-    if sys.version_info < (3, 12):
-        for t in (torch_mm, "2.1", "2.0"):
-            candidates.append(("2.1.0", t))
-    # mmcv 2.2.0 ships cp312 wheels for torch 2.1 → 2.4.
-    for t in (torch_mm, "2.4", "2.3", "2.2", "2.1"):
-        candidates.append(("2.2.0", t))
-
-    tried: list[str] = []
-    for ver, torch_tag in candidates:
-        url = f"https://download.openmmlab.com/mmcv/dist/{cu}/torch{torch_tag}.0/index.html"
-        label = f"mmcv=={ver} (torch{torch_tag}/{cu})"
-        tried.append(label)
-        proc = _run(
-            pip + [f"mmcv=={ver}", "-f", url, "--only-binary", "mmcv"],
-            f"try {label}",
-            check=False,
-        )
-        if proc.returncode == 0:
-            return ver
-
-    raise RuntimeError(
-        "No prebuilt mmcv wheel matched this runtime.\n"
-        "Tried:\n  - " + "\n  - ".join(tried) + "\n"
-        "Workarounds:\n"
-        "  - Runtime → Restart session (Colab may have switched torch/CUDA)\n"
-        "  - or pin torch first:  !pip install -q torch==2.4.0 torchvision==0.19.0 "
-        "--index-url https://download.pytorch.org/whl/cu121\n"
-        "  - then rerun this cell."
+def _install_mmcv(pip: list[str], stack: dict[str, str]) -> str:
+    _run(
+        pip
+        + [
+            f"mmcv=={stack['mmcv']}",
+            "-f",
+            stack["mmcv_index"],
+            "--only-binary",
+            "mmcv",
+        ],
+        f"mmcv=={stack['mmcv']} ({stack['label']})",
     )
+    return stack["mmcv"]
 
 
 def _patch_mmdet_mmcv_ceiling(installed_mmcv: str) -> None:
@@ -188,6 +221,7 @@ def _install_deps(reinstall: bool = False) -> None:
         return
 
     pip = [sys.executable, "-m", "pip", "install", "-q"]
+    stack = _target_stack()
 
     # Colab's Py 3.12 ships a setuptools whose pkg_resources uses
     # pkgutil.ImpImporter (removed in 3.12). Force-reinstall to overwrite it.
@@ -196,9 +230,10 @@ def _install_deps(reinstall: bool = False) -> None:
         "setuptools / wheel (Py 3.12 fix)",
     )
 
+    _ensure_torch_stack(pip, stack)
     _run(pip + ["mmengine==0.10.7"], "mmengine==0.10.7")
 
-    installed_mmcv = _install_mmcv(pip)
+    installed_mmcv = _install_mmcv(pip, stack)
 
     # --no-deps: mmdet's setup.py pins mmcv<2.2.0, which would make the resolver
     # fight us on Py 3.12. We install mmdet alone, then handle its runtime deps.
@@ -243,12 +278,15 @@ def _print_summary(project_root: Path, drive_root: Path) -> None:
     try:
         import torch
         gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU only"
+        torch_version = torch.__version__
     except ImportError:
         gpu = "?"
+        torch_version = "?"
     print()
     print(f"Project : {project_root}")
     print(f"Drive   : {drive_root}")
     print(f"Device  : {gpu}")
+    print(f"Torch   : {torch_version}")
 
 
 def setup(drive_folder: str | None = None, install: bool = True) -> None:

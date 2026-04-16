@@ -53,9 +53,12 @@ Notebooks with a Colab bootstrap cell already wired:
 
 The bootstrap cell at the top of each Colab-ready notebook:
 1. Clones this repo into `/content/INF8225_Projet` (if not already there) and `cd`s into it.
-2. Installs `mmengine`, `mmcv==2.1.0`, `mmdet==3.3.0` via `mim` (picks the right wheel for Colab's torch).
-3. Installs the small extras from `colab/requirements-colab.txt` (`transformers==4.33.0`, `nltk`, `pycocotools`, ...).
-4. Mounts Drive, locates the project folder, creates symlinks so the notebook code (which uses paths like `data/Kvasir-SEG/...` and `work_dirs/polyp_config/...`) finds everything on Drive unchanged.
+2. Pins Colab to a known-good PyTorch stack supported by OpenMMLab:
+   - GPU runtime: `torch==2.4.0`, `torchvision==0.19.0`, `torchaudio==2.4.0` from the `cu121` wheels
+   - CPU runtime: `torch==2.3.1`, `torchvision==0.18.1`, `torchaudio==2.3.1`
+3. Installs `mmengine==0.10.7`, `mmcv==2.2.0`, and `mmdet==3.3.0` from prebuilt wheels only.
+4. Installs the small extras from `colab/requirements-colab.txt` (`transformers`, `nltk`, `pycocotools`, ...).
+5. Mounts Drive, locates the project folder, creates symlinks so the notebook code (which uses paths like `data/Kvasir-SEG/...` and `work_dirs/polyp_config/...`) finds everything on Drive unchanged.
 
 ## 4. Outputs persist on Drive automatically
 
