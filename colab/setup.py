@@ -72,6 +72,20 @@ def _find_drive_folder(explicit: str | None) -> Path:
     )
 
 
+def _run(cmd: list[str], desc: str) -> None:
+    """Run a subprocess; on failure, surface the tail of stdout/stderr (which mim/pip -q swallow)."""
+    print(f"→ {desc}")
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        tail_out = "\n".join((proc.stdout or "").splitlines()[-40:])
+        tail_err = "\n".join((proc.stderr or "").splitlines()[-40:])
+        raise RuntimeError(
+            f"\ncommand failed ({proc.returncode}): {' '.join(cmd)}\n"
+            f"--- stdout (last 40 lines) ---\n{tail_out}\n"
+            f"--- stderr (last 40 lines) ---\n{tail_err}\n"
+        )
+
+
 def _install_deps(reinstall: bool = False) -> None:
     if not reinstall:
         try:
@@ -84,16 +98,13 @@ def _install_deps(reinstall: bool = False) -> None:
     pip = [sys.executable, "-m", "pip", "install", "-q"]
     mim = [sys.executable, "-m", "mim", "install", "-q"]
 
-    print("installing openmim...")
-    subprocess.check_call(pip + ["-U", "openmim"])
-    print("installing mmengine / mmcv / mmdet via mim...")
-    subprocess.check_call(mim + ["mmengine==0.10.7"])
-    subprocess.check_call(mim + ["mmcv==2.1.0"])
-    subprocess.check_call(mim + ["mmdet==3.3.0"])
+    _run(pip + ["-U", "openmim"], "openmim")
+    _run(mim + ["mmengine==0.10.7"], "mmengine==0.10.7")
+    _run(mim + ["mmcv==2.1.0"], "mmcv==2.1.0")
+    _run(mim + ["mmdet==3.3.0"], "mmdet==3.3.0")
 
     reqs = Path(__file__).resolve().parent / "requirements-colab.txt"
-    print("installing project deps...")
-    subprocess.check_call(pip + ["-r", str(reqs)])
+    _run(pip + ["-r", str(reqs)], "extras (transformers, nltk, ...)")
 
 
 def _link(local: Path, target: Path) -> None:
