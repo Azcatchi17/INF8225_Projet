@@ -96,18 +96,44 @@ def _install_deps(reinstall: bool = False) -> None:
             pass
 
     pip = [sys.executable, "-m", "pip", "install", "-q"]
-    mim = [sys.executable, "-m", "mim", "install", "-q"]
 
-    # Python 3.12 on Colab ships an old setuptools whose pkg_resources uses the
-    # removed pkgutil.ImpImporter — mim crashes on import without this upgrade.
-    _run(pip + ["-U", "setuptools", "wheel"], "setuptools / wheel (Py 3.12 fix)")
-    _run(pip + ["-U", "openmim"], "openmim")
-    _run(mim + ["mmengine==0.10.7"], "mmengine==0.10.7")
-    _run(mim + ["mmcv==2.1.0"], "mmcv==2.1.0")
-    _run(mim + ["mmdet==3.3.0"], "mmdet==3.3.0")
+    # Colab Python 3.12 ships a setuptools whose pkg_resources uses the
+    # removed pkgutil.ImpImporter. Any tool that imports setuptools crashes.
+    # Force-reinstall to overwrite it; plain -U skips because pip considers
+    # the pinned-by-Colab version "already up to date".
+    _run(pip + ["--force-reinstall", "-U", "setuptools>=70", "wheel"],
+         "setuptools / wheel (Py 3.12 fix)")
+
+    # mmengine and mmdet are pure-Python — pip direct is simpler and avoids
+    # openmim, which is itself broken by the setuptools issue above.
+    _run(pip + ["mmengine==0.10.7"], "mmengine==0.10.7")
+
+    # mmcv has compiled CUDA ops → prefer a pre-built wheel matching Colab's torch.
+    index = _mmcv_wheel_index()
+    if index is not None:
+        _run(pip + ["mmcv==2.1.0", "-f", index],
+             f"mmcv==2.1.0 (prebuilt wheel @ {index})")
+    else:
+        _run(pip + ["mmcv==2.1.0"], "mmcv==2.1.0 (source build, slow)")
+
+    _run(pip + ["mmdet==3.3.0"], "mmdet==3.3.0")
 
     reqs = Path(__file__).resolve().parent / "requirements-colab.txt"
     _run(pip + ["-r", str(reqs)], "extras (transformers, nltk, ...)")
+
+
+def _mmcv_wheel_index() -> str | None:
+    """OpenMMLab prebuilt-wheel index matching Colab's torch/CUDA, or None."""
+    try:
+        import torch
+    except ImportError:
+        return None
+    t = ".".join(torch.__version__.split("+")[0].split(".")[:2])  # "2.5"
+    cu = getattr(torch.version, "cuda", None)
+    if not cu:
+        return None
+    cu_tag = "cu" + cu.replace(".", "")[:3]  # "121" / "124"
+    return f"https://download.openmmlab.com/mmcv/dist/{cu_tag}/torch{t}/index.html"
 
 
 def _link(local: Path, target: Path) -> None:
