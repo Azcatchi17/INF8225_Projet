@@ -21,7 +21,7 @@ DRIVE_FOLDER_URL = f"https://drive.google.com/drive/folders/{DRIVE_FOLDER_ID}"
 SYMLINK_MAP = {
     "data": "data",
     "work_dirs": "work_dirs",
-    "MedSAM/work_dir": "MedSAM/work_dir",
+    "MedSAM/work_dir": "work_dir",
     "grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth":
         "grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth",
 }

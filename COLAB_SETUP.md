@@ -22,8 +22,7 @@ Projet_Medsam/                                         ← Drive folder
 │   └── polyp_config/
 │       ├── polyp_config.py
 │       └── best_coco_bbox_mAP_epoch_2.pth     ← fine-tuned DINO
-├── MedSAM/
-│   └── work_dir/
+├── work_dir/
 │       └── MedSAM/
 │           └── medsam_vit_b.pth
 └── grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth   (optional, training only)
