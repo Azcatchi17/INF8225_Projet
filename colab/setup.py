@@ -391,6 +391,13 @@ def setup(
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
 
+    # MedSAM's vendored segment_anything uses absolute imports
+    # (`from segment_anything.modeling import Sam`), so the MedSAM folder
+    # itself needs to be on sys.path — not just the repo root.
+    medsam_dir = project_root / "MedSAM"
+    if medsam_dir.is_dir() and str(medsam_dir) not in sys.path:
+        sys.path.insert(0, str(medsam_dir))
+
     # Run nltk downloads in a subprocess: if the kernel already had numpy
     # preloaded (Colab's default), the in-memory numpy can mismatch the
     # freshly-installed on-disk numpy ABI. A subprocess uses the clean
