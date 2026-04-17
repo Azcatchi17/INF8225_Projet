@@ -11,12 +11,24 @@ from .actions import apply_action
 from .gemma import MaskAction
 from .logging_utils import log_run
 from .models import get_gemma_client
-from .state import AgentState, GemmaAction, IterationResult
+from .state import AgentState, GemmaAction, IterationResult, MaskMetrics
 
 
 def _box_center(box: list[float]) -> tuple[float, float]:
     x1, y1, x2, y2 = box
     return (x1 + x2) / 2.0, (y1 + y2) / 2.0
+
+
+def _is_trusted(m: MaskMetrics) -> bool:
+    """Mask already looks good enough: skip the Gemini call, early-stop.
+    Protects cases where Gemini would 'correct' a correct mask."""
+    return (
+        not m.is_empty
+        and not m.is_oversized
+        and m.n_components <= config.TRUST_MAX_COMPONENTS
+        and m.bbox_agreement_iou >= config.TRUST_BBOX_IOU
+        and m.compactness >= config.TRUST_COMPACTNESS
+    )
 
 
 def _as_gemma_action(a: MaskAction) -> GemmaAction:
@@ -97,6 +109,11 @@ def run_agent(
     # 5. Refinement loop
     for i in range(1, max_iter):
         prev = state.iterations[-1]
+
+        # Trust region — mask already looks good, skip Gemini and stop
+        if _is_trusted(prev.metrics):
+            state.stop_reason = "trust_region"
+            break
 
         # Short-circuits save Gemma calls on obvious failures
         if prev.metrics.is_empty:

@@ -56,14 +56,17 @@ def run_batch(
             continue
         gt = _load_gt(file_name)
         state = run_agent(str(img_path), user_text, max_iter=max_iter, gt_mask=gt)
-        final_dice = state.iterations[-1].dice_vs_gt if state.iterations else 0.0
+        best = state.best_iter()
+        last = state.iterations[-1] if state.iterations else None
         rows.append({
             "image_id": img_info["id"],
             "file_name": file_name,
             "n_iterations": len(state.iterations),
             "stop_reason": state.stop_reason,
-            "final_dice": final_dice,
             "first_iter_dice": state.iterations[0].dice_vs_gt if state.iterations else 0.0,
+            "last_iter_dice": last.dice_vs_gt if last else 0.0,
+            "best_iter": best.iteration if best else -1,
+            "final_dice": best.dice_vs_gt if best else 0.0,
         })
 
     df = pd.DataFrame(rows)
@@ -98,15 +101,19 @@ def compare_oneshot_vs_agentic(
         state: AgentState = run_agent(
             str(img_path), user_text, max_iter=max_iter, gt_mask=gt
         )
-        final_dice = state.iterations[-1].dice_vs_gt if state.iterations else 0.0
+        best = state.best_iter()
+        last = state.iterations[-1] if state.iterations else None
+        final_dice = best.dice_vs_gt if best else 0.0
 
         rows.append({
             "image_id": img_info["id"],
             "file_name": file_name,
             "one_shot_dice": one_shot_dice,
             "agentic_dice": final_dice,
+            "last_iter_dice": last.dice_vs_gt if last else 0.0,
             "dice_delta": final_dice - one_shot_dice,
             "n_iterations": len(state.iterations),
+            "best_iter": best.iteration if best else -1,
             "stop_reason": state.stop_reason,
         })
 

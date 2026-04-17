@@ -99,13 +99,34 @@ class AgentState:
         self.iterations.append(result)
 
     def final_mask(self) -> Optional[np.ndarray]:
-        return self.iterations[-1].mask if self.iterations else None
+        it = self.best_iter()
+        return it.mask if it else None
+
+    def best_iter(self) -> Optional["IterationResult"]:
+        """Best-iter policy: pick the iteration whose mask looks most 'polyp-shaped'
+        using GT-free signals only (bbox agreement × compactness, minus penalties
+        for empty / oversized / fragmented masks). Ties broken by earlier iteration
+        (less risk of Gemini-induced drift)."""
+        if not self.iterations:
+            return None
+
+        def score(it: "IterationResult") -> tuple[float, int]:
+            m = it.metrics
+            if m.is_empty or m.is_oversized or m.n_components == 0:
+                return (-1.0, -it.iteration)
+            s = m.bbox_agreement_iou * max(m.compactness, 0.1)
+            if m.n_components > 1:
+                s *= m.largest_component_pct
+            return (s, -it.iteration)
+
+        return max(self.iterations, key=score)
 
     def fail(self, reason: str) -> "AgentState":
         self.stop_reason = reason
         return self
 
     def to_dict(self) -> dict:
+        best = self.best_iter()
         return {
             "run_id": self.run_id,
             "image_path": self.image_path,
@@ -115,6 +136,7 @@ class AgentState:
             "candidate_boxes": [b.to_dict() for b in self.candidate_boxes],
             "iterations": [it.to_dict() for it in self.iterations],
             "stop_reason": self.stop_reason,
+            "best_iter": best.iteration if best else None,
         }
 
     def to_json(self, path: str | Path) -> None:

@@ -27,9 +27,18 @@ DINO_TOP_K = 5              # candidates kept for replace_box action
 EMPTY_AREA_PCT = 0.001      # below this → short-circuit add_positive
 OVERSIZED_AREA_PCT = 0.4    # above this → short-circuit shrink_box
 
+# --- Trust region (pre-stop) ---------------------------------------------
+# If the current mask passes ALL these, skip the Gemini review and stop.
+# Rationale: batch showed Gemini degrades already-good masks ~40% of the
+# time. A mask with tight bbox agreement + single connected blob + decent
+# compactness almost always IS the polyp.
+TRUST_BBOX_IOU = 0.7
+TRUST_COMPACTNESS = 0.45
+TRUST_MAX_COMPONENTS = 1
+
 # --- Gemma -----------------------------------------------------------------
-# Gemini 2.5 Flash on Google AI Studio (paid tier, multimodal).
-GEMMA_MODEL_ID = "gemini-2.5-flash"
+# Gemini 3.1 Pro on Google AI Studio (paid tier, multimodal).
+GEMMA_MODEL_ID = "gemini-3.1-pro"
 GEMMA_API_KEY_ENV = "GEMINI_API_KEY"
 GEMMA_IMAGE_SIDE = 512              # downscale images sent to Gemma to save tokens
 GEMMA_MAX_REQUESTS_PER_MIN = 1000   # paid Tier 1 (adjust to match your quota)
