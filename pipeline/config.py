@@ -38,7 +38,7 @@ TRUST_MAX_COMPONENTS = 1
 
 # --- Gemma -----------------------------------------------------------------
 # Gemini 3.1 Pro on Google AI Studio (paid tier, multimodal).
-GEMMA_MODEL_ID = "gemini-3.1-pro"
+GEMMA_MODEL_ID = "gemini-3.1-pro-preview"
 GEMMA_API_KEY_ENV = "GEMINI_API_KEY"
 GEMMA_IMAGE_SIDE = 512              # downscale images sent to Gemma to save tokens
 GEMMA_MAX_REQUESTS_PER_MIN = 1000   # paid Tier 1 (adjust to match your quota)
