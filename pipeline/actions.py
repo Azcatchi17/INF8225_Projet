@@ -23,6 +23,32 @@ def _scale_box(xyxy: list[float], scale: float) -> list[float]:
     return [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2]
 
 
+def _coerce_xy(p: dict, default_x: float, default_y: float) -> tuple[float, float]:
+    """Accept {x:.., y:..}, {x:[a,b]}, {point:[a,b]}, {xy:[a,b]}."""
+    for key in ("point", "xy", "coords"):
+        v = p.get(key)
+        if isinstance(v, (list, tuple)) and len(v) >= 2:
+            try:
+                return float(v[0]), float(v[1])
+            except (TypeError, ValueError):
+                pass
+    x, y = p.get("x"), p.get("y")
+    if isinstance(x, (list, tuple)) and len(x) >= 2 and y is None:
+        try:
+            return float(x[0]), float(x[1])
+        except (TypeError, ValueError):
+            pass
+    try:
+        fx = float(x) if x is not None else default_x
+    except (TypeError, ValueError):
+        fx = default_x
+    try:
+        fy = float(y) if y is not None else default_y
+    except (TypeError, ValueError):
+        fy = default_y
+    return fx, fy
+
+
 def apply_action(
     action: GemmaAction,
     prev_box: list[float],
@@ -38,11 +64,12 @@ def apply_action(
     labels = list(prev_labels)
 
     if name == "add_positive":
-        points.append([float(p.get("x", (box[0] + box[2]) / 2)),
-                       float(p.get("y", (box[1] + box[3]) / 2))])
+        cx, cy = _coerce_xy(p, (box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
+        points.append([cx, cy])
         labels.append(1)
     elif name == "add_negative":
-        points.append([float(p.get("x", 0.0)), float(p.get("y", 0.0))])
+        cx, cy = _coerce_xy(p, 0.0, 0.0)
+        points.append([cx, cy])
         labels.append(0)
     elif name == "expand_box":
         box = _scale_box(box, float(p.get("scale", 1.15)))
