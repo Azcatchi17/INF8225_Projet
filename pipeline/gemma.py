@@ -140,11 +140,21 @@ class GemmaClient:
             thinking_config=types.ThinkingConfig(thinking_budget=0),
             temperature=0.0,
         )
-        raw = self._retry(
-            lambda: self._client.models.generate_content(
-                model=self._model_id, contents=user_msg, config=cfg,
+        try:
+            raw = self._retry(
+                lambda: self._client.models.generate_content(
+                    model=self._model_id, contents=user_msg, config=cfg,
+                )
             )
-        )
+        except Exception as exc:
+            print(
+                f"[gemma] refine_prompt fallback after {type(exc).__name__}: "
+                "using the raw user prompt",
+                flush=True,
+            )
+            refined = PromptRefinement(search_text=user_text.strip().lower()[:40])
+            self._prompt_cache[cache_key] = refined
+            return refined
         parsed = getattr(raw, "parsed", None)
         if isinstance(parsed, PromptRefinement):
             self._prompt_cache[cache_key] = parsed
@@ -190,11 +200,21 @@ class GemmaClient:
             thinking_config=types.ThinkingConfig(thinking_budget=0),
             temperature=0.2,
         )
-        raw = self._retry(
-            lambda: self._client.models.generate_content(
-                model=self._model_id, contents=parts, config=cfg,
+        try:
+            raw = self._retry(
+                lambda: self._client.models.generate_content(
+                    model=self._model_id, contents=parts, config=cfg,
+                )
             )
-        )
+        except Exception as exc:
+            print(
+                f"[gemma] analyze_mask fallback after {type(exc).__name__}: "
+                "returning stop",
+                flush=True,
+            )
+            return MaskAction(
+                action="stop", rationale=f"service_error:{type(exc).__name__}"
+            )
         try:
             return MaskAction(**_parse_json_loose(raw.text or ""))
         except (ValidationError, json.JSONDecodeError):
@@ -242,11 +262,19 @@ class GemmaClient:
             thinking_config=types.ThinkingConfig(thinking_budget=0),
             temperature=0.0,
         )
-        raw = self._retry(
-            lambda: self._client.models.generate_content(
-                model=self._model_id, contents=parts, config=cfg,
+        try:
+            raw = self._retry(
+                lambda: self._client.models.generate_content(
+                    model=self._model_id, contents=parts, config=cfg,
+                )
             )
-        )
+        except Exception as exc:
+            print(
+                f"[gemma] detect_boxes fallback after {type(exc).__name__}: "
+                "returning no boxes",
+                flush=True,
+            )
+            return []
         parsed = getattr(raw, "parsed", None)
         if isinstance(parsed, DetectionResult):
             items = [b.model_dump() for b in parsed.boxes]
