@@ -32,8 +32,8 @@ OVERSIZED_AREA_PCT = 0.4    # above this → short-circuit shrink_box
 # Rationale: batch showed Gemini degrades already-good masks ~40% of the
 # time. A mask with tight bbox agreement + single connected blob + decent
 # compactness almost always IS the polyp.
-TRUST_BBOX_IOU = 0.7
-TRUST_COMPACTNESS = 0.45
+TRUST_BBOX_IOU = 0.9
+TRUST_COMPACTNESS = 0.7
 TRUST_MAX_COMPONENTS = 1
 
 # --- Gemma -----------------------------------------------------------------
