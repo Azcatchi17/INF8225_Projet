@@ -103,23 +103,44 @@ class AgentState:
         return it.mask if it else None
 
     def best_iter(self) -> Optional["IterationResult"]:
-        """Best-iter policy: pick the iteration whose mask looks most 'polyp-shaped'
-        using GT-free signals only (bbox agreement × compactness, minus penalties
-        for empty / oversized / fragmented masks). Ties broken by earlier iteration
-        (less risk of Gemini-induced drift)."""
+        """Anchor iter 0 unless a later iteration clearly improves BOTH bbox_iou AND
+        compactness by >= 5%. Protects the detection-baseline mask from being
+        overwritten by a noisy Gemini-driven iteration whose proxy score happens to
+        be slightly higher but whose real DICE is worse."""
         if not self.iterations:
             return None
 
-        def score(it: "IterationResult") -> tuple[float, int]:
+        def score(it: "IterationResult") -> float:
             m = it.metrics
             if m.is_empty or m.is_oversized or m.n_components == 0:
-                return (-1.0, -it.iteration)
+                return -1.0
             s = m.bbox_agreement_iou * max(m.compactness, 0.1)
             if m.n_components > 1:
                 s *= m.largest_component_pct
-            return (s, -it.iteration)
+            return s
 
-        return max(self.iterations, key=score)
+        it0 = self.iterations[0]
+        m0 = it0.metrics
+        iter0_healthy = (
+            not m0.is_empty and not m0.is_oversized
+            and m0.n_components >= 1 and m0.bbox_agreement_iou >= 0.85
+        )
+
+        if not iter0_healthy:
+            # Fall back to pure proxy scoring when iter 0 isn't trustworthy.
+            return max(self.iterations, key=lambda it: (score(it), -it.iteration))
+
+        best = it0
+        margin = 1.05  # need 5% improvement on both axes
+        for it in self.iterations[1:]:
+            m = it.metrics
+            if m.is_empty or m.is_oversized or m.n_components == 0:
+                continue
+            if (m.bbox_agreement_iou >= m0.bbox_agreement_iou * margin
+                    and m.compactness >= m0.compactness * margin
+                    and score(it) > score(best)):
+                best = it
+        return best
 
     def fail(self, reason: str) -> "AgentState":
         self.stop_reason = reason

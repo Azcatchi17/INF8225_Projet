@@ -7,7 +7,7 @@ from typing import Optional
 import numpy as np
 
 from . import config, grounding_dino as gd, medsam, metrics as M
-from .actions import apply_action
+from .actions import apply_action, is_action_sane
 from .gemma import MaskAction
 from .logging_utils import log_run
 from .models import get_gemma_client
@@ -139,6 +139,10 @@ def run_agent(
             break
 
         ga = _as_gemma_action(action)
+        if not is_action_sane(ga, prev.mask):
+            state.stop_reason = "rejected_add_positive"
+            break
+
         box2, pts2, lbl2 = apply_action(
             ga, prev.box_used_xyxy, prev.points_used, prev.point_labels,
             candidates=state.candidate_boxes,

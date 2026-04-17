@@ -1,7 +1,9 @@
 """Convert Gemma action dicts into concrete (box, points, labels) updates."""
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Optional
+
+import numpy as np
 
 from .state import Box, GemmaAction
 
@@ -84,3 +86,19 @@ def apply_action(
     # "stop" is handled by the caller, never reaches here in the normal flow
 
     return box, points, labels
+
+
+def is_action_sane(action: GemmaAction, prev_mask: Optional[np.ndarray]) -> bool:
+    """Reject destructive add_positive calls that would move the point OUTSIDE
+    the current mask while the mask is healthy (non-empty). Gemini sometimes
+    returns a point on the image background, which sends MedSAM chasing noise."""
+    if action.action != "add_positive":
+        return True
+    if prev_mask is None or not prev_mask.any():
+        return True
+    x, y = _coerce_xy(action.params or {}, -1.0, -1.0)
+    H, W = prev_mask.shape[:2]
+    xi, yi = int(round(x)), int(round(y))
+    if not (0 <= xi < W and 0 <= yi < H):
+        return False
+    return bool(prev_mask[yi, xi])

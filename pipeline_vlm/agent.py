@@ -11,7 +11,7 @@ from typing import Optional
 import numpy as np
 
 from pipeline import medsam, metrics as M
-from pipeline.actions import apply_action
+from pipeline.actions import apply_action, is_action_sane
 from pipeline.gemma import MaskAction
 from pipeline.models import get_gemma_client
 from pipeline.state import AgentState, GemmaAction, IterationResult, MaskMetrics
@@ -153,6 +153,10 @@ def run_agent(
             break
 
         ga = _as_gemma_action(action)
+        if not is_action_sane(ga, prev.mask):
+            state.stop_reason = "rejected_add_positive"
+            break
+
         box2, pts2, lbl2 = apply_action(
             ga, prev.box_used_xyxy, prev.points_used, prev.point_labels,
             candidates=state.candidate_boxes,
