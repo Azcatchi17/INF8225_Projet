@@ -39,6 +39,9 @@ OUTPUT_SUBDIRS = [
     "data/outputs_medsam",
     "data/outputs_medsam_dino",
     "data/results",
+    "data/agent_runs",
+    "data/agent_results",
+    "data/agent_cache",
     "work_dirs/polyp_config",
 ]
 

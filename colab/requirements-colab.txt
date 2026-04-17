@@ -14,3 +14,6 @@ addict
 yapf
 shapely
 terminaltables
+# Agentic pipeline (Gemma via Google AI Studio)
+google-genai>=0.3.0
+pydantic>=2.5.0
