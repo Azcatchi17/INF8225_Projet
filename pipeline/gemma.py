@@ -137,7 +137,7 @@ class GemmaClient:
             system_instruction=_REFINE_SYSTEM,
             response_mime_type="application/json",
             response_schema=PromptRefinement,
-            thinking_config=types.ThinkingConfig(thinking_level="low"),
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
             temperature=0.0,
         )
         raw = self._retry(
@@ -187,7 +187,7 @@ class GemmaClient:
         cfg = types.GenerateContentConfig(
             system_instruction=_ANALYZE_SYSTEM,
             response_mime_type="application/json",
-            thinking_config=types.ThinkingConfig(thinking_level="low"),
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
             temperature=0.2,
         )
         raw = self._retry(
@@ -239,7 +239,7 @@ class GemmaClient:
             system_instruction=system,
             response_mime_type="application/json",
             response_schema=DetectionResult,
-            thinking_config=types.ThinkingConfig(thinking_level="low"),
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
             temperature=0.0,
         )
         raw = self._retry(
