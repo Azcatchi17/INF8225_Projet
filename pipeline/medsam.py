@@ -120,4 +120,80 @@ def segment(
     low_res_pred = F.interpolate(
         low_res_pred, size=(H, W), mode="bilinear", align_corners=False,
     )
-    return (low_res_pred.squeeze().cpu().numpy() > 0.5).astype(np.uint8)
+    mask = (low_res_pred.squeeze().cpu().numpy() > 0.5).astype(np.uint8)
+    if getattr(config, "POSTPROCESS_MASK", False):
+        mask = postprocess_mask(mask)
+    return mask
+
+
+def postprocess_mask(
+    mask: np.ndarray,
+    min_component_ratio: float | None = None,
+    close_iters: int = 2,
+) -> np.ndarray:
+    """Morphological closing + drop components < ratio * largest. Smooths rough
+    edges and kills speckles that confuse compactness/bbox_iou metrics."""
+    from scipy import ndimage
+
+    if mask is None or not mask.any():
+        return mask
+    ratio = (
+        min_component_ratio
+        if min_component_ratio is not None
+        else getattr(config, "POSTPROCESS_MIN_COMPONENT", 0.05)
+    )
+    closed = ndimage.binary_closing(mask.astype(bool), iterations=close_iters)
+    lbl, n = ndimage.label(closed)
+    if n == 0:
+        return np.zeros_like(mask, dtype=np.uint8)
+    if n == 1:
+        return closed.astype(np.uint8)
+    sizes = ndimage.sum(closed, lbl, range(1, n + 1))
+    largest = float(sizes.max())
+    keep = (sizes >= largest * ratio).astype(np.uint8)
+    keep = np.concatenate([[0], keep])  # background label 0
+    return keep[lbl].astype(np.uint8)
+
+
+@torch.no_grad()
+def segment_ensemble(
+    image_embed: torch.Tensor,
+    H: int,
+    W: int,
+    boxes: list[list[float]],
+    top_k: int | None = None,
+) -> tuple[np.ndarray, int]:
+    """Segment with each of the first top_k boxes, return (best_mask, idx).
+
+    Best is chosen by GT-free proxy: bbox_iou(mask, box) × compactness,
+    discounted by largest_component_pct when the mask fragments.
+    Falls back to the first box if every candidate is empty/oversized."""
+    from . import metrics as M  # avoid circular import at module load
+
+    if not boxes:
+        raise ValueError("segment_ensemble needs at least one box")
+
+    k = top_k if top_k is not None else getattr(config, "ENSEMBLE_TOP_K", 3)
+    candidates = boxes[:k]
+
+    best_mask: np.ndarray | None = None
+    best_idx = 0
+    best_score = -1.0
+    for i, b in enumerate(candidates):
+        m = segment(image_embed, H=H, W=W, box=list(b))
+        mm = M.mask_metrics(m, list(b))
+        if mm.is_empty or mm.is_oversized:
+            continue
+        s = mm.bbox_agreement_iou * max(mm.compactness, 0.1)
+        if mm.n_components > 1:
+            s *= mm.largest_component_pct
+        if s > best_score:
+            best_score = s
+            best_mask = m
+            best_idx = i
+
+    if best_mask is None:
+        # Every candidate was degenerate — return mask of the first box anyway.
+        best_mask = segment(image_embed, H=H, W=W, box=list(candidates[0]))
+        best_idx = 0
+    return best_mask, best_idx

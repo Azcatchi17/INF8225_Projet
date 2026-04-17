@@ -101,8 +101,13 @@ def run_agent(
     # 3. MedSAM: encode image ONCE, cache in state
     state.image_embed = medsam.encode_image(state.image_np)
 
-    # 4. Iteration 0 — box-only
-    box0 = list(state.candidate_boxes[0].xyxy)
+    # 4. Iteration 0 — ensemble over top-K detector boxes
+    box_list = [list(b.xyxy) for b in state.candidate_boxes]
+    _, best_idx = medsam.segment_ensemble(
+        state.image_embed, H=H, W=W, boxes=box_list,
+        top_k=config.ENSEMBLE_TOP_K,
+    )
+    box0 = box_list[best_idx]
     it0 = _run_iteration(state, 0, box0, [], [], H, W, None, gt_mask)
     state.push_iter(it0)
 

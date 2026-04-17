@@ -116,10 +116,15 @@ def run_agent(
     print("[agent] encode_image...", flush=True)
     state.image_embed = medsam.encode_image(state.image_np)
 
-    box0 = list(state.candidate_boxes[0].xyxy)
+    box_list = [list(b.xyxy) for b in state.candidate_boxes]
+    _, best_idx = medsam.segment_ensemble(
+        state.image_embed, H=H, W=W, boxes=box_list,
+        top_k=config.ENSEMBLE_TOP_K,
+    )
+    box0 = box_list[best_idx]
     it0 = _run_iteration(state, 0, box0, [], [], H, W, None, gt_mask)
     state.push_iter(it0)
-    print(f"[agent] iter 0 done (dice={it0.dice_vs_gt})", flush=True)
+    print(f"[agent] iter 0 done (box_idx={best_idx} dice={it0.dice_vs_gt})", flush=True)
 
     # 5. Refinement loop
     for i in range(1, max_iter):

@@ -36,6 +36,11 @@ TRUST_BBOX_IOU = 0.85
 TRUST_COMPACTNESS = 0.5
 TRUST_MAX_COMPONENTS = 1
 
+# --- Phase 2: MedSAM improvements ----------------------------------------
+POSTPROCESS_MASK = True         # morphological closing + drop tiny components
+POSTPROCESS_MIN_COMPONENT = 0.05  # drop components < 5% of the largest
+ENSEMBLE_TOP_K = 3              # iter 0 runs MedSAM on the top-K detector boxes
+
 # --- Gemma -----------------------------------------------------------------
 # Gemini 3.1 Pro on Google AI Studio (paid tier, multimodal).
 GEMMA_MODEL_ID = "gemini-2.5-flash"
