@@ -186,7 +186,6 @@ class GemmaClient:
         cfg = types.GenerateContentConfig(
             system_instruction=_ANALYZE_SYSTEM,
             response_mime_type="application/json",
-            response_schema=MaskAction,
             temperature=0.2,
         )
         raw = self._retry(
@@ -194,9 +193,6 @@ class GemmaClient:
                 model=self._model_id, contents=parts, config=cfg,
             )
         )
-        parsed = getattr(raw, "parsed", None)
-        if isinstance(parsed, MaskAction):
-            return parsed
         try:
             return MaskAction(**_parse_json_loose(raw.text or ""))
         except (ValidationError, json.JSONDecodeError):
