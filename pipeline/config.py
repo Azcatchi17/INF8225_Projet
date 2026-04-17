@@ -28,12 +28,11 @@ EMPTY_AREA_PCT = 0.001      # below this → short-circuit add_positive
 OVERSIZED_AREA_PCT = 0.4    # above this → short-circuit shrink_box
 
 # --- Gemma -----------------------------------------------------------------
-# Free tier by default; switch to "gemma-4-e4b-it" (HF: google/gemma-4-E4B-it)
-# once the free version has validated the pipeline end-to-end.
-GEMMA_MODEL_ID = "gemini-2.5-flash"
+# Paid Gemma 4 E4B on Google AI Studio (HF: google/gemma-4-E4B-it).
+GEMMA_MODEL_ID = "gemma-4-e4b-it"
 GEMMA_API_KEY_ENV = "GEMINI_API_KEY"
-GEMMA_IMAGE_SIDE = 512            # downscale images sent to Gemma to save tokens
-GEMMA_MAX_REQUESTS_PER_MIN = 5    # Gemini free-tier default for this model
+GEMMA_IMAGE_SIDE = 512             # downscale images sent to Gemma to save tokens
+GEMMA_MAX_REQUESTS_PER_MIN = 60    # paid tier; bump higher if your quota allows
 GEMMA_MAX_RETRIES = 6
 GEMMA_RETRY_BASE_DELAY = 1.0
 GEMMA_RETRY_BUFFER_SEC = 1.0      # small cushion around server-provided delays
