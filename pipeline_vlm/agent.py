@@ -84,12 +84,13 @@ def run_agent(
 
     gemma = get_gemma_client()
 
-    # 1. Gemini refines the query
+    print("[agent] refine_prompt...", flush=True)
     ref = gemma.refine_prompt(user_text)
     state.refined_prompt = ref.search_text
     state.synonyms = list(ref.synonyms)
+    print(f"[agent] refined='{ref.search_text}' synonyms={list(ref.synonyms)}", flush=True)
 
-    # 2. Gemini (not DINO) proposes candidate boxes; fall back through synonyms
+    print("[agent] detect_boxes...", flush=True)
     state.candidate_boxes = gemma.detect_boxes(
         image_path, state.refined_prompt,
         score_threshold=config.VLM_SCORE_THRESHOLD,
@@ -98,11 +99,13 @@ def run_agent(
     for syn in state.synonyms:
         if state.candidate_boxes:
             break
+        print(f"[agent] detect_boxes fallback syn='{syn}'...", flush=True)
         state.candidate_boxes = gemma.detect_boxes(
             image_path, syn,
             score_threshold=config.VLM_SCORE_THRESHOLD,
             top_k=config.VLM_TOP_K,
         )
+    print(f"[agent] {len(state.candidate_boxes)} candidate box(es)", flush=True)
 
     if not state.candidate_boxes:
         state.fail("no_box")
@@ -110,13 +113,13 @@ def run_agent(
             log_run(state)
         return state
 
-    # 3. MedSAM: encode image ONCE
+    print("[agent] encode_image...", flush=True)
     state.image_embed = medsam.encode_image(state.image_np)
 
-    # 4. Iteration 0 — box-only
     box0 = list(state.candidate_boxes[0].xyxy)
     it0 = _run_iteration(state, 0, box0, [], [], H, W, None, gt_mask)
     state.push_iter(it0)
+    print(f"[agent] iter 0 done (dice={it0.dice_vs_gt})", flush=True)
 
     # 5. Refinement loop
     for i in range(1, max_iter):
@@ -139,6 +142,7 @@ def run_agent(
                 rationale="oversized short-circuit",
             )
         else:
+            print(f"[agent] iter {i}: analyze_mask...", flush=True)
             action = gemma.analyze_mask(
                 state.image_np, prev.mask, prev.metrics.to_gemma_dict(),
                 state.refined_prompt, i, max_iter,

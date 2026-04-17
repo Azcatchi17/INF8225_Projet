@@ -38,12 +38,13 @@ TRUST_MAX_COMPONENTS = 1
 
 # --- Gemma -----------------------------------------------------------------
 # Gemini 3.1 Pro on Google AI Studio (paid tier, multimodal).
-GEMMA_MODEL_ID = "gemini-3.1-pro-preview"
+GEMMA_MODEL_ID = "gemini-2.5-flash"
 GEMMA_API_KEY_ENV = "GEMINI_API_KEY"
 GEMMA_IMAGE_SIDE = 512              # downscale images sent to Gemma to save tokens
 GEMMA_MAX_REQUESTS_PER_MIN = 1000   # paid Tier 1 (adjust to match your quota)
 GEMMA_MAX_RETRIES = 6
 GEMMA_RETRY_BASE_DELAY = 1.0
+GEMMA_RETRY_MAX_DELAY = 30.0      # cap server-provided retryDelay (avoid 30-min waits)
 GEMMA_RETRY_BUFFER_SEC = 1.0      # small cushion around server-provided delays
 
 # --- MedSAM / device ------------------------------------------------------

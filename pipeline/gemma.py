@@ -137,6 +137,7 @@ class GemmaClient:
             system_instruction=_REFINE_SYSTEM,
             response_mime_type="application/json",
             response_schema=PromptRefinement,
+            thinking_config=types.ThinkingConfig(thinking_level="low"),
             temperature=0.0,
         )
         raw = self._retry(
@@ -186,6 +187,7 @@ class GemmaClient:
         cfg = types.GenerateContentConfig(
             system_instruction=_ANALYZE_SYSTEM,
             response_mime_type="application/json",
+            thinking_config=types.ThinkingConfig(thinking_level="low"),
             temperature=0.2,
         )
         raw = self._retry(
@@ -237,6 +239,7 @@ class GemmaClient:
             system_instruction=system,
             response_mime_type="application/json",
             response_schema=DetectionResult,
+            thinking_config=types.ThinkingConfig(thinking_level="low"),
             temperature=0.0,
         )
         raw = self._retry(
@@ -310,6 +313,12 @@ class GemmaClient:
                 retry_delay = _extract_retry_delay(e)
                 if retry_delay is None:
                     retry_delay = config.GEMMA_RETRY_BASE_DELAY * (2 ** attempt)
+                retry_delay = min(retry_delay, config.GEMMA_RETRY_MAX_DELAY)
+                print(
+                    f"[gemma] attempt {attempt + 1}/{config.GEMMA_MAX_RETRIES} "
+                    f"failed ({type(e).__name__}); sleeping {retry_delay:.1f}s",
+                    flush=True,
+                )
                 time.sleep(retry_delay + config.GEMMA_RETRY_BUFFER_SEC)
         raise last_exc  # type: ignore[misc]
 
