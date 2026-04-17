@@ -63,14 +63,43 @@ def _resolve_api_key() -> str:
     key = os.environ.get(config.GEMMA_API_KEY_ENV)
     if key:
         return key
+
+    colab_error: Exception | None = None
     try:  # Colab Secrets
         from google.colab import userdata  # type: ignore
-        return userdata.get(config.GEMMA_API_KEY_ENV)
+
+        key = userdata.get(config.GEMMA_API_KEY_ENV)
+        if key:
+            os.environ[config.GEMMA_API_KEY_ENV] = key
+            return key
+    except Exception as exc:
+        colab_error = exc
+
+    # In Colab notebooks, fall back to a hidden prompt so the user can
+    # continue without restarting after adding a secret.
+    try:
+        from getpass import getpass
+
+        key = getpass(
+            f"Enter {config.GEMMA_API_KEY_ENV} "
+            "(input hidden, leave empty to abort): "
+        ).strip()
+        if key:
+            os.environ[config.GEMMA_API_KEY_ENV] = key
+            return key
+    except (EOFError, KeyboardInterrupt):
+        pass
     except Exception:
-        raise RuntimeError(
-            f"No {config.GEMMA_API_KEY_ENV}: set it as a Colab secret "
-            "(🔑 left pane) or export it as an env var locally."
-        )
+        pass
+
+    detail = ""
+    if colab_error is not None:
+        detail = f" Colab secret lookup failed with {type(colab_error).__name__}."
+    raise RuntimeError(
+        f"No {config.GEMMA_API_KEY_ENV}: set it as a Colab secret "
+        f"(left sidebar), export it as an env var locally, or enter it "
+        f"when prompted.{detail}"
+    )
 
 
 def reset_cache() -> None:

@@ -1,12 +1,16 @@
 """Grounding DINO detection wrapper."""
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import torch
 
 from . import config
 from .models import get_dino_model
 from .state import Box
+
+_DINO_BF16_DISABLED = False
 
 
 def _normalize_prompt(text: str) -> str:
@@ -26,11 +30,26 @@ def detect(
 ) -> list[Box]:
     from mmdet.apis import inference_detector
 
+    global _DINO_BF16_DISABLED
+
     model = get_dino_model()
     prompt = _normalize_prompt(text)
 
-    if config.USE_BF16 and torch.cuda.is_available():
-        with torch.autocast("cuda", dtype=torch.bfloat16):
+    use_bf16 = config.USE_BF16 and torch.cuda.is_available() and not _DINO_BF16_DISABLED
+    if use_bf16:
+        try:
+            with torch.autocast("cuda", dtype=torch.bfloat16):
+                result = inference_detector(model, image_path, text_prompt=prompt)
+        except RuntimeError as exc:
+            if "BFloat16" not in str(exc):
+                raise
+            _DINO_BF16_DISABLED = True
+            warnings.warn(
+                "Grounding DINO CUDA ops do not support bfloat16 in this "
+                "environment; retrying in float32.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
             result = inference_detector(model, image_path, text_prompt=prompt)
     else:
         result = inference_detector(model, image_path, text_prompt=prompt)
