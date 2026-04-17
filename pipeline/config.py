@@ -33,6 +33,10 @@ OVERSIZED_AREA_PCT = 0.4    # above this → short-circuit shrink_box
 GEMMA_MODEL_ID = "gemini-2.5-flash"
 GEMMA_API_KEY_ENV = "GEMINI_API_KEY"
 GEMMA_IMAGE_SIDE = 512            # downscale images sent to Gemma to save tokens
+GEMMA_MAX_REQUESTS_PER_MIN = 5    # Gemini free-tier default for this model
+GEMMA_MAX_RETRIES = 6
+GEMMA_RETRY_BASE_DELAY = 1.0
+GEMMA_RETRY_BUFFER_SEC = 1.0      # small cushion around server-provided delays
 
 # --- MedSAM / device ------------------------------------------------------
 DEVICE = "cuda"  # falls back to cpu at load time if unavailable

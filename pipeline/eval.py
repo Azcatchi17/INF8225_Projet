@@ -39,6 +39,7 @@ def run_batch(
     test_json: str | Path = config.KVASIR_TEST_JSON,
     user_text: str = "find the polyp",
     n: Optional[int] = None,
+    max_iter: int = config.MAX_ITER,
 ) -> pd.DataFrame:
     with open(test_json) as f:
         test = json.load(f)
@@ -54,7 +55,7 @@ def run_batch(
         if not img_path.exists():
             continue
         gt = _load_gt(file_name)
-        state = run_agent(str(img_path), user_text, gt_mask=gt)
+        state = run_agent(str(img_path), user_text, max_iter=max_iter, gt_mask=gt)
         final_dice = state.iterations[-1].dice_vs_gt if state.iterations else 0.0
         rows.append({
             "image_id": img_info["id"],
@@ -75,6 +76,7 @@ def compare_oneshot_vs_agentic(
     test_json: str | Path = config.KVASIR_TEST_JSON,
     user_text: str = "find the polyp",
     n: int = 50,
+    max_iter: int = config.MAX_ITER,
 ) -> pd.DataFrame:
     """Run both pipelines on the same images, save a CSV + a bar-chart PNG."""
     import matplotlib.pyplot as plt
@@ -93,7 +95,9 @@ def compare_oneshot_vs_agentic(
         gt = _load_gt(file_name)
 
         one_shot_dice, _ = _one_shot(img_path, gt)
-        state: AgentState = run_agent(str(img_path), user_text, gt_mask=gt)
+        state: AgentState = run_agent(
+            str(img_path), user_text, max_iter=max_iter, gt_mask=gt
+        )
         final_dice = state.iterations[-1].dice_vs_gt if state.iterations else 0.0
 
         rows.append({

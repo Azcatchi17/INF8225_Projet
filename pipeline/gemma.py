@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import time
+from collections import deque
 from typing import Literal
 
 import numpy as np
@@ -86,16 +88,37 @@ def _parse_json_loose(text: str) -> dict:
     return json.loads(t)
 
 
+def _extract_retry_delay(exc: Exception) -> float | None:
+    text = str(exc)
+    patterns = [
+        r"retry in ([0-9]+(?:\.[0-9]+)?)s",
+        r"'retryDelay': '([0-9]+(?:\.[0-9]+)?)s'",
+        r'"retryDelay":\s*"([0-9]+(?:\.[0-9]+)?)s"',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return float(match.group(1))
+    return None
+
+
 class GemmaClient:
     def __init__(self, api_key: str, model_id: str) -> None:
         from google import genai  # imported lazily so non-Colab imports work
 
         self._client = genai.Client(api_key=api_key)
         self._model_id = model_id
+        self._prompt_cache: dict[str, PromptRefinement] = {}
+        self._request_times: deque[float] = deque()
 
     # ------------------------------------------------------------------
     def refine_prompt(self, user_text: str) -> PromptRefinement:
         from google.genai import types
+
+        cache_key = user_text.strip().lower()
+        cached = self._prompt_cache.get(cache_key)
+        if cached is not None:
+            return cached
 
         user_msg = (
             "Dataset: Kvasir-SEG (colonoscopy polyps). "
@@ -113,10 +136,12 @@ class GemmaClient:
         )
         data = _parse_json_loose(raw.text or "")
         try:
-            return PromptRefinement(**data)
+            refined = PromptRefinement(**data)
         except ValidationError:
             # Fallback: echo the user text as-is so the pipeline still progresses
-            return PromptRefinement(search_text=user_text.strip().lower()[:40])
+            refined = PromptRefinement(search_text=user_text.strip().lower()[:40])
+        self._prompt_cache[cache_key] = refined
+        return refined
 
     # ------------------------------------------------------------------
     def analyze_mask(
@@ -161,14 +186,44 @@ class GemmaClient:
             return MaskAction(action="stop", rationale="parse_failure")
 
     # ------------------------------------------------------------------
-    def _retry(self, fn, tries: int = 2, base_delay: float = 1.0):
+    def _wait_for_rate_limit(self) -> None:
+        limit = config.GEMMA_MAX_REQUESTS_PER_MIN
+        if limit <= 0:
+            return
+
+        now = time.monotonic()
+        window = 60.0
+        while self._request_times and now - self._request_times[0] >= window:
+            self._request_times.popleft()
+
+        if len(self._request_times) < limit:
+            return
+
+        sleep_for = window - (now - self._request_times[0]) + config.GEMMA_RETRY_BUFFER_SEC
+        if sleep_for > 0:
+            time.sleep(sleep_for)
+
+        now = time.monotonic()
+        while self._request_times and now - self._request_times[0] >= window:
+            self._request_times.popleft()
+
+    # ------------------------------------------------------------------
+    def _retry(self, fn):
         last_exc: Exception | None = None
-        for attempt in range(tries):
+        for attempt in range(config.GEMMA_MAX_RETRIES):
+            self._wait_for_rate_limit()
             try:
-                return fn()
+                result = fn()
+                self._request_times.append(time.monotonic())
+                return result
             except Exception as e:  # noqa: BLE001 — any Gemma SDK error
                 last_exc = e
-                time.sleep(base_delay * (2 ** attempt))
+                if attempt == config.GEMMA_MAX_RETRIES - 1:
+                    break
+                retry_delay = _extract_retry_delay(e)
+                if retry_delay is None:
+                    retry_delay = config.GEMMA_RETRY_BASE_DELAY * (2 ** attempt)
+                time.sleep(retry_delay + config.GEMMA_RETRY_BUFFER_SEC)
         raise last_exc  # type: ignore[misc]
 
 
