@@ -33,6 +33,15 @@ class MaskAction(BaseModel):
     rationale: str = ""
 
 
+class DetectedBox(BaseModel):
+    box_2d: list[float] = Field(..., min_length=4, max_length=4)
+    score: float = 1.0
+
+
+class DetectionResult(BaseModel):
+    boxes: list[DetectedBox] = Field(default_factory=list)
+
+
 _REFINE_SYSTEM = (
     "You are a medical imaging assistant. Your job is to convert a user's "
     "instruction into a short Grounding DINO text prompt. "
@@ -127,6 +136,8 @@ class GemmaClient:
         cfg = types.GenerateContentConfig(
             system_instruction=_REFINE_SYSTEM,
             response_mime_type="application/json",
+            response_schema=PromptRefinement,
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
             temperature=0.0,
         )
         raw = self._retry(
@@ -134,10 +145,13 @@ class GemmaClient:
                 model=self._model_id, contents=user_msg, config=cfg,
             )
         )
-        data = _parse_json_loose(raw.text or "")
+        parsed = getattr(raw, "parsed", None)
+        if isinstance(parsed, PromptRefinement):
+            self._prompt_cache[cache_key] = parsed
+            return parsed
         try:
-            refined = PromptRefinement(**data)
-        except ValidationError:
+            refined = PromptRefinement(**_parse_json_loose(raw.text or ""))
+        except (ValidationError, json.JSONDecodeError):
             # Fallback: echo the user text as-is so the pipeline still progresses
             refined = PromptRefinement(search_text=user_text.strip().lower()[:40])
         self._prompt_cache[cache_key] = refined
@@ -173,6 +187,7 @@ class GemmaClient:
         cfg = types.GenerateContentConfig(
             system_instruction=_ANALYZE_SYSTEM,
             response_mime_type="application/json",
+            response_schema=MaskAction,
             temperature=0.2,
         )
         raw = self._retry(
@@ -180,10 +195,88 @@ class GemmaClient:
                 model=self._model_id, contents=parts, config=cfg,
             )
         )
+        parsed = getattr(raw, "parsed", None)
+        if isinstance(parsed, MaskAction):
+            return parsed
         try:
             return MaskAction(**_parse_json_loose(raw.text or ""))
         except (ValidationError, json.JSONDecodeError):
             return MaskAction(action="stop", rationale="parse_failure")
+
+    # ------------------------------------------------------------------
+    def detect_boxes(
+        self,
+        image_path: str,
+        text: str,
+        score_threshold: float = 0.3,
+        top_k: int = 5,
+    ) -> list:
+        """Gemini-native object detection. Returns list[Box] in pixel coords.
+
+        Replaces Grounding DINO in the VLM-only variant. Uses Gemini's
+        documented bbox convention: box_2d = [ymin, xmin, ymax, xmax] in
+        the 0..1000 normalised range."""
+        from google.genai import types
+        from .state import Box
+
+        img = Image.open(image_path)
+        W, H = img.size
+        png = _downscale_png(img, config.GEMMA_IMAGE_SIDE)
+
+        system = (
+            "You are a medical object detector for Kvasir-SEG (colonoscopy "
+            "images). Detect ALL instances of the requested target. "
+            "Return STRICT JSON: {\"boxes\": [{\"box_2d\": [ymin, xmin, "
+            "ymax, xmax], \"score\": <0-1 confidence>}, ...]}. "
+            "Coordinates MUST be normalised to the 0-1000 range. "
+            "Return an empty list if nothing matches."
+        )
+        instructions = (
+            f"Target: {text}. Return ONE JSON object with key 'boxes'."
+        )
+        parts = [
+            types.Part.from_bytes(data=png, mime_type="image/png"),
+            types.Part.from_text(text=instructions),
+        ]
+        cfg = types.GenerateContentConfig(
+            system_instruction=system,
+            response_mime_type="application/json",
+            response_schema=DetectionResult,
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
+            temperature=0.0,
+        )
+        raw = self._retry(
+            lambda: self._client.models.generate_content(
+                model=self._model_id, contents=parts, config=cfg,
+            )
+        )
+        parsed = getattr(raw, "parsed", None)
+        if isinstance(parsed, DetectionResult):
+            items = [b.model_dump() for b in parsed.boxes]
+        else:
+            try:
+                data = _parse_json_loose(raw.text or "")
+                items = data.get("boxes", []) if isinstance(data, dict) else []
+            except (ValueError, json.JSONDecodeError):
+                return []
+
+        out: list[Box] = []
+        for item in items:
+            box = item.get("box_2d")
+            if not (isinstance(box, list) and len(box) == 4):
+                continue
+            score = float(item.get("score", 1.0))
+            if score < score_threshold:
+                continue
+            ymin, xmin, ymax, xmax = [float(v) for v in box]
+            out.append(Box(
+                xyxy=(xmin / 1000.0 * W, ymin / 1000.0 * H,
+                      xmax / 1000.0 * W, ymax / 1000.0 * H),
+                score=score,
+            ))
+
+        out.sort(key=lambda b: -b.score)
+        return out[:top_k]
 
     # ------------------------------------------------------------------
     def _wait_for_rate_limit(self) -> None:

@@ -42,6 +42,9 @@ OUTPUT_SUBDIRS = [
     "data/agent_runs",
     "data/agent_results",
     "data/agent_cache",
+    "data/agent_runs_vlm",
+    "data/agent_results_vlm",
+    "data/agent_cache_vlm",
     "work_dirs/polyp_config",
 ]
 
