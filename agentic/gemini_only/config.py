@@ -1,9 +1,9 @@
-"""VLM variant config. Same as pipeline.config except separate output dirs
-so runs don't collide with the DINO+Gemini baseline."""
+"""Gemini-only variant config. Same as dino_gemini.config except separate output
+dirs so runs don't collide with the DINO+Gemini baseline."""
 from __future__ import annotations
 
-from pipeline.config import *  # noqa: F401,F403 — re-export shared constants
-from pipeline import config as _base
+from agentic.dino_gemini.config import *  # noqa: F401,F403 — re-export shared constants
+from agentic.dino_gemini import config as _base
 
 AGENT_RUNS_DIR = _base.PROJECT_ROOT / "data" / "agent_runs_vlm"
 AGENT_RESULTS_DIR = _base.PROJECT_ROOT / "data" / "agent_results_vlm"

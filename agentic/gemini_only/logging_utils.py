@@ -1,4 +1,4 @@
-"""Same as pipeline.logging_utils but writes under agent_{runs,results,cache}_vlm."""
+"""Same as dino_gemini.logging_utils but writes under agent_{runs,results,cache}_vlm."""
 from __future__ import annotations
 
 import json
@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image
 
 from . import config
-from pipeline.state import AgentState
+from agentic.dino_gemini.state import AgentState
 
 
 def _run_dir(run_id: str) -> Path:

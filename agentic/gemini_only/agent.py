@@ -1,6 +1,6 @@
-"""Agentic loop — VLM-only: Gemini detects boxes AND reviews masks.
+"""Agentic loop — Gemini-only: Gemini detects boxes AND reviews masks.
 
-Identical to pipeline.agent except the box-proposal stage uses
+Identical to agentic.dino_gemini.agent except the box-proposal stage uses
 `GemmaClient.detect_boxes` instead of Grounding DINO.
 """
 from __future__ import annotations
@@ -10,11 +10,11 @@ from typing import Optional
 
 import numpy as np
 
-from pipeline import medsam, metrics as M
-from pipeline.actions import apply_action, is_action_sane
-from pipeline.gemma import MaskAction
-from pipeline.models import get_gemma_client
-from pipeline.state import AgentState, GemmaAction, IterationResult, MaskMetrics
+from agentic.dino_gemini import medsam, metrics as M
+from agentic.dino_gemini.actions import apply_action, is_action_sane
+from agentic.dino_gemini.gemma import MaskAction
+from agentic.dino_gemini.models import get_gemma_client
+from agentic.dino_gemini.state import AgentState, GemmaAction, IterationResult, MaskMetrics
 
 from . import config
 from .logging_utils import log_run

@@ -1,4 +1,4 @@
-"""Batch eval for the VLM variant. One-shot baseline also uses Gemini detect."""
+"""Batch eval for the Gemini-only variant. One-shot baseline also uses Gemini detect."""
 from __future__ import annotations
 
 import json
@@ -11,9 +11,9 @@ import pandas as pd
 from skimage import io
 from tqdm import tqdm
 
-from pipeline import medsam, metrics as M
-from pipeline.models import get_gemma_client
-from pipeline.state import AgentState
+from agentic.dino_gemini import medsam, metrics as M
+from agentic.dino_gemini.models import get_gemma_client
+from agentic.dino_gemini.state import AgentState
 
 from . import config
 from .agent import run_agent
