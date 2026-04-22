@@ -45,7 +45,12 @@ OUTPUT_SUBDIRS = [
     "data/agent_runs_vlm",
     "data/agent_results_vlm",
     "data/agent_cache_vlm",
+    "data/agent_runs_msd",
+    "data/agent_results_msd",
+    "data/agent_cache_msd",
+    "data/agent_results_improved",
     "work_dirs/polyp_config",
+    "work_dirs/pancreas_unet",
 ]
 
 # Colab's preinstalled torch can jump ahead of OpenMMLab wheel support
