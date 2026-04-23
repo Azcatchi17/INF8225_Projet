@@ -136,6 +136,21 @@ def _bce_dice_loss(logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     return bce + dice
 
 
+def _tversky_loss(
+    logits: torch.Tensor, target: torch.Tensor,
+    alpha: float = 0.3, beta: float = 0.7, eps: float = 1e-6,
+) -> torch.Tensor:
+    """1 - TP / (TP + α·FP + β·FN). β > α penalises FN more than FP,
+    pushing recall up — what we want for a ROI gate."""
+    prob = torch.sigmoid(logits).flatten(1)
+    t = target.flatten(1)
+    tp = (prob * t).sum(1)
+    fp = (prob * (1 - t)).sum(1)
+    fn = ((1 - prob) * t).sum(1)
+    tversky = (tp + eps) / (tp + alpha * fp + beta * fn + eps)
+    return 1 - tversky
+
+
 def _batch_dice(logits: torch.Tensor, target: torch.Tensor, thr: float = 0.5) -> float:
     pred = (torch.sigmoid(logits) > thr)
     tgt = target > 0.5
@@ -169,8 +184,14 @@ def train_pancreas_unet(
     save_path: Optional[str | Path] = None,
     device: Optional[str] = None,
     num_workers: int = 2,
+    loss_name: str = "bce_dice",
+    tversky_beta: float = 0.7,
+    base_channels: int = 32,
 ) -> TrainResult:
-    """Train the UNet on MSD pancreas labels (label==1). Saves best val-DICE ckpt."""
+    """Train the UNet on MSD pancreas labels (label==1). Saves best val-DICE ckpt.
+
+    loss_name: "bce_dice" (default, balanced) or "tversky" (FN-penalised via tversky_beta).
+    base_channels: width of the UNet (32 → 1.9M params, 48 → 4.2M)."""
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     save_path = Path(save_path) if save_path else config.PANCREAS_CKPT
 
@@ -181,9 +202,19 @@ def train_pancreas_unet(
     val_dl = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
                         num_workers=num_workers, pin_memory=(device == "cuda"))
 
-    model = TinyUNet().to(device)
+    model = TinyUNet(base=base_channels).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(epochs, 1))
+
+    if loss_name == "tversky":
+        a = 1.0 - float(tversky_beta)
+        b = float(tversky_beta)
+        def loss_fn(lg, tg):
+            return _tversky_loss(lg, tg, alpha=a, beta=b).mean()
+    elif loss_name == "bce_dice":
+        loss_fn = _bce_dice_loss
+    else:
+        raise ValueError(f"unknown loss_name: {loss_name}")
 
     best_dice = 0.0
     history: list[dict] = []
@@ -196,7 +227,7 @@ def train_pancreas_unet(
             msk = msk.to(device, non_blocking=True)
             opt.zero_grad()
             logits = model(img).squeeze(1)
-            loss = _bce_dice_loss(logits, msk)
+            loss = loss_fn(logits, msk)
             loss.backward()
             opt.step()
             running += float(loss.item())
@@ -222,8 +253,13 @@ def train_pancreas_unet(
                 "val_dice": best_dice,
                 "img_size": img_size,
                 "epoch": ep,
+                "loss_name": loss_name,
+                "tversky_beta": tversky_beta,
+                "base_channels": base_channels,
             }, save_path)
 
+    # Drop cached model so subsequent infer_pancreas() loads the fresh checkpoint
+    reset_cache()
     return TrainResult(best_val_dice=best_dice, history=history, save_path=str(save_path))
 
 
@@ -246,7 +282,8 @@ def get_pancreas_unet(ckpt_path: Optional[str | Path] = None, device: Optional[s
         )
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     ckpt = torch.load(path, map_location=device, weights_only=False)
-    model = TinyUNet().to(device)
+    base = int(ckpt.get("base_channels", 32))
+    model = TinyUNet(base=base).to(device)
     model.load_state_dict(ckpt["state_dict"])
     model.eval()
     _CACHE[key] = {
@@ -254,6 +291,7 @@ def get_pancreas_unet(ckpt_path: Optional[str | Path] = None, device: Optional[s
         "img_size": int(ckpt.get("img_size", 256)),
         "device": device,
         "val_dice": float(ckpt.get("val_dice", 0.0)),
+        "base_channels": base,
     }
     return _CACHE[key]  # type: ignore[return-value]
 

@@ -256,7 +256,7 @@ def infer_gated(
     score_threshold: Optional[float] = None,
     distractor_prompts: Optional[list[str]] = None,
     pancreas_ckpt: Optional[str] = None,
-    clip_mask_to_roi: bool = True,
+    clip_mask_to_roi: Optional[bool] = None,
 ) -> GateResult:
     """Full gated inference for a single image path.
 
@@ -269,6 +269,7 @@ def infer_gated(
     from . import pancreas_roi  # lazy — avoids torch import until actually needed
 
     threshold = score_threshold if score_threshold is not None else config.TUMOR_DIFF_THRESHOLD
+    do_clip = clip_mask_to_roi if clip_mask_to_roi is not None else config.CLIP_MASK_TO_PANCREAS_ROI
     image_np = medsam.load_image(image_path)
     H, W = image_np.shape[:2]
     empty_mask = np.zeros((H, W), dtype=np.uint8)
@@ -316,7 +317,11 @@ def infer_gated(
     # G2 — pancreas filter
     diag: list[dict] = []
     if use_pancreas_roi and pancreas_mask is not None and pancreas_bbox is not None:
-        kept, diag = filter_boxes_by_pancreas(boxes, pancreas_mask, pancreas_bbox)
+        kept, diag = filter_boxes_by_pancreas(
+            boxes, pancreas_mask, pancreas_bbox,
+            min_overlap=config.MIN_PANCREAS_OVERLAP,
+            min_center_in_mask=config.MIN_CENTER_IN_MASK,
+        )
         if not kept:
             return GateResult(
                 decision="no_tumor_outside_roi",
@@ -370,7 +375,7 @@ def infer_gated(
         box = _clip_box_to_bbox(box, pancreas_bbox, pad=5.0)
     embed = medsam.encode_image(image_np)
     mask = medsam.segment(embed, H=H, W=W, box=box)
-    if clip_mask_to_roi and pancreas_mask is not None:
+    if do_clip and pancreas_mask is not None:
         mask = (mask.astype(bool) & pancreas_mask.astype(bool)).astype(np.uint8)
 
     return GateResult(
