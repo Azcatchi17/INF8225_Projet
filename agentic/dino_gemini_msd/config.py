@@ -24,7 +24,7 @@ AGENT_CACHE_DIR = PROJECT_ROOT / "data" / "agent_cache_msd"
 # --- Agent loop thresholds ------------------------------------------------
 MAX_ITER = 5
 CONVERGENCE_IOU = 0.98      
-DINO_SCORE_THRESHOLD = 0.2  # Seuil abaissé car DINO est plus timide sur le pancréas
+DINO_SCORE_THRESHOLD = 0.06  # Seuil abaissé car DINO est plus timide sur le pancréas
 DINO_TOP_K = 5              
 EMPTY_AREA_PCT = 0.001      
 OVERSIZED_AREA_PCT = 0.4    
@@ -79,4 +79,4 @@ MEDSAM_INPUT_SIDE = 1024
 USE_BF16 = True
 
 # --- Prompt pour MSD ------------------------------------------------------
-DEFAULT_DINO_TEXT = "tumor."
+DEFAULT_DINO_TEXT = "pancreas . tumor ."
