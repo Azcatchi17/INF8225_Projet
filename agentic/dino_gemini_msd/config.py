@@ -6,7 +6,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # Pointage vers tes nouveaux modèles MSD
-DINO_CONFIG = PROJECT_ROOT / "tumor_config_v3.py"
+DINO_CONFIG = PROJECT_ROOT / "work_dirs" / "tumor_config_v3" / "tumor_config_v3.py"
 DINO_CHECKPOINT = PROJECT_ROOT / "work_dirs" / "tumor_config_v3" / "best_coco_bbox_mAP_epoch_25.pth"
 MEDSAM_CHECKPOINT = PROJECT_ROOT / "MedSAM" / "work_dir" / "MedSAM" / "medsam_vit_b.pth"
 
