@@ -31,10 +31,10 @@ echo "[setup] TAMIA_ASSETS=$TAMIA_ASSETS"
 echo "[setup] TAMIA_VENV=$TAMIA_VENV"
 
 # -----------------------------------------------------------------------------
-# 1. Modules (StdEnv 2023 + cuda 12.1 pour matcher torch 2.5.1+cu121)
+# 1. Modules (StdEnv 2023 + cuda 12.2, pile standard Alliance Canada)
 # -----------------------------------------------------------------------------
 module purge
-module load StdEnv/2023 gcc/12.3 python/3.11 cuda/12.1 cudnn opencv/4.10.0
+module load StdEnv/2023 gcc/12.3 python/3.11 cuda/12.2 cudnn opencv/4.10.0
 
 # -----------------------------------------------------------------------------
 # 2. Copie du repo vers $SCRATCH (outputs iront la-bas, pas dans $HOME)

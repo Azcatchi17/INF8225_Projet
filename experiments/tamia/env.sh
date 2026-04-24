@@ -25,10 +25,10 @@ source "$THIS_DIR/config.sh"
 # 1. Modules TamIA
 # -----------------------------------------------------------------------------
 # StdEnv/2023 est la pile recommandee. python/3.11 est celle compatible avec
-# mmdet 3.3 + mmcv 2.1. cuda/12.1 matche le build torch 2.5.1+cu121. opencv est
-# fourni par module pour eviter la compilation.
+# mmdet 3.3 + mmcv 2.1. cuda/12.2 est la version pairee avec StdEnv/2023 sur
+# Alliance. opencv fourni par module pour eviter la compilation.
 module purge
-module load StdEnv/2023 gcc/12.3 python/3.11 cuda/12.1 cudnn opencv/4.10.0
+module load StdEnv/2023 gcc/12.3 python/3.11 cuda/12.2 cudnn opencv/4.10.0
 
 # -----------------------------------------------------------------------------
 # 2. Venv
