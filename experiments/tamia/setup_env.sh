@@ -110,6 +110,12 @@ pip install "addict" "yapf" "terminaltables" "shapely" || true
 
 # gdown : necessaire si stage_assets.sh doit tirer les assets depuis Google
 # Drive (voie A du README). Harmless sinon.
+#
+# typing_extensions est explicitement upgrade : gdown 5.x importe
+# `typing_extensions.Unpack` (necessite >= 4.5). Le wheelhouse Alliance a
+# parfois une version plus ancienne installee en transitive et pip n upgrade
+# pas automatiquement -> ModuleNotFoundError a l import.
+pip install --upgrade "typing_extensions>=4.12"
 pip install "gdown>=5.1.0"
 
 # -----------------------------------------------------------------------------
