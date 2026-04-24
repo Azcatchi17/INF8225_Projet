@@ -8,9 +8,10 @@
 #
 # Usage :
 #   cd ~/INF8225_Projet               # ton clone initial dans $HOME
-#   cp experiments/tamia/config.example.sh experiments/tamia/config.sh
-#   nano experiments/tamia/config.sh   # ajuste PI_NAME etc.
 #   bash experiments/tamia/setup_env.sh
+#
+# Pre-requis : experiments/tamia/config.sh deja versionne avec les bonnes
+# valeurs (PI_NAME, CLUSTER_USER, GPU_TYPE, GDRIVE_FOLDER_URL).
 
 set -euo pipefail
 
@@ -18,7 +19,7 @@ THIS_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 REPO_SRC="$( cd -- "$THIS_DIR/../.." &> /dev/null && pwd )"
 
 if [[ ! -f "$THIS_DIR/config.sh" ]]; then
-    echo "[setup] experiments/tamia/config.sh absent. Copie config.example.sh puis edite-le." >&2
+    echo "[setup] experiments/tamia/config.sh absent (devrait etre versionne)." >&2
     exit 1
 fi
 # shellcheck disable=SC1091
@@ -112,12 +113,11 @@ pip install "addict" "yapf" "terminaltables" "shapely" || true
 pip install "gdown>=5.1.0"
 
 # -----------------------------------------------------------------------------
-# 6. .gitignore local pour ne pas committer config.sh ni logs
+# 6. .gitignore local pour les logs
 # -----------------------------------------------------------------------------
 GITIGNORE="$THIS_DIR/.gitignore"
 if [[ ! -f "$GITIGNORE" ]]; then
     cat > "$GITIGNORE" <<'EOF'
-config.sh
 logs/*.out
 logs/*.err
 EOF

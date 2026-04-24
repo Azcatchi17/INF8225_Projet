@@ -14,14 +14,12 @@
 set -euo pipefail
 
 THIS_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-if [[ -f "$THIS_DIR/config.sh" ]]; then
-    # shellcheck disable=SC1091
-    source "$THIS_DIR/config.sh"
-else
-    echo "[env.sh] ATTENTION: experiments/tamia/config.sh absent, fallback sur config.example.sh" >&2
-    # shellcheck disable=SC1091
-    source "$THIS_DIR/config.example.sh"
+if [[ ! -f "$THIS_DIR/config.sh" ]]; then
+    echo "[env.sh] ERREUR: experiments/tamia/config.sh absent" >&2
+    exit 1
 fi
+# shellcheck disable=SC1091
+source "$THIS_DIR/config.sh"
 
 # -----------------------------------------------------------------------------
 # 1. Modules TamIA

@@ -31,10 +31,10 @@ sans modifier aucun des scripts python existants, en chainant les etapes via `sb
 ```
 experiments/tamia/
 ├── README.md                        (ce fichier)
-├── config.example.sh                template a copier -> config.sh
+├── config.sh                        pre-rempli (compte aip-azouaq, user dchikhi, GPU h100)
 ├── env.sh                           sourced par chaque job (modules + venv + symlinks)
 ├── setup_env.sh                     a lancer UNE FOIS sur le noeud de login
-├── stage_assets.sh                  stage dataset + checkpoints sur $SCRATCH
+├── stage_assets.sh                  stage dataset + checkpoints sur $SCRATCH (via gdown)
 ├── submit_all.sh                    orchestrateur (sbatch avec dependences)
 ├── slurm/
 │   ├── 00_calibrate_dino.sbatch
@@ -80,18 +80,18 @@ git clone https://github.com/moradBMH/INF8225_Projet.git   # ou ton fork
 cd INF8225_Projet
 ```
 
-### 2.2 Remplir config.sh
+### 2.2 Verifier config.sh
 
-```bash
-cp experiments/tamia/config.example.sh experiments/tamia/config.sh
-nano experiments/tamia/config.sh
-```
+`experiments/tamia/config.sh` est **pre-rempli et versionne** dans le repo. Verifie juste que les valeurs correspondent a ton setup :
 
-A minima, ajuste :
+| Variable | Valeur actuelle | Si different |
+|---|---|---|
+| `PI_NAME` | `azouaq` | edite si ton allocation AIP n est pas `aip-azouaq` |
+| `CLUSTER_USER` | `dchikhi` | mets ton username TamIA (utilise pour rsync exterieur) |
+| `GPU_TYPE` | `h100` | `h200` si tu vises specifiquement les 141G |
+| `GDRIVE_FOLDER_URL` | folder Morad | OK tant que le folder reste partage en lecture |
 
-- `PI_NAME` -> le nom d utilisateur de ton prof dans l allocation AIP (`aip-<pi>`).
-- `GPU_TYPE` -> `h100` (par defaut) ou `h200` si tu en as besoin.
-- `MSD_SOURCE`, `DINO_CKPT_SOURCE`, `MEDSAM_CKPT_SOURCE` -> chemins (local, http, s3) ou laisse vide si tu poses les fichiers a la main.
+Aucun edit n est necessaire si tu executes depuis le compte `dchikhi` avec l allocation `aip-azouaq`.
 
 ### 2.3 Construire le venv et copier le repo sur $SCRATCH
 
@@ -108,7 +108,7 @@ Ce script :
 5. installe `mmengine==0.10.7`, `mmcv==2.1.0`, `mmdet==3.3.0` via `mim` (internet login node),
 6. installe `transformers==4.33.0` (la version que le text encoder DINO attend),
 7. installe MedSAM en editable depuis `MedSAM/` du repo,
-8. cree `experiments/tamia/.gitignore` pour eviter de committer `config.sh` et les logs.
+8. cree `experiments/tamia/.gitignore` pour ne pas committer les logs SLURM.
 
 ### 2.4 Stager les assets
 
@@ -119,7 +119,7 @@ bash experiments/tamia/stage_assets.sh
 **Par defaut** (et c est le cas cible si tu clones juste depuis GitHub sans assets locaux), le script utilise `GDRIVE_FOLDER_URL` de `config.sh` et tire tout le folder Google Drive via `gdown` :
 
 ```
-Drive folder (prerempli dans config.example.sh)
+Drive folder (prerempli dans config.sh)
   ├── MSD_pancreas/                             -> $TAMIA_ASSETS/MSD_pancreas/
   ├── best_coco_bbox_mAP_epoch_25.pth           -> $TAMIA_ASSETS/work_dirs/tumor_config_v3/
   ├── tumor_config_v3.py    (optionnel)         -> idem (fallback: copie depuis le repo)
