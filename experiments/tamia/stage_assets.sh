@@ -56,18 +56,23 @@ require_gdown() {
         echo "[stage] ERREUR: gdown absent. Lance d abord experiments/tamia/setup_env.sh" >&2
         exit 1
     fi
-    # Detection version + presence de --remaining-ok (ajoute en gdown 5.2).
-    # Si absent, on affiche un warning ; si le folder Drive a > 50 fichiers par
-    # sous-dossier (cas MSD_pancreas), il faudra upgrade gdown.
+    # Compat --remaining-ok :
+    #   - gdown <  5.2  : flag n existe pas, limite dure a 50 fichiers / folder
+    #   - gdown 5.2.x   : flag necessaire pour depasser 50 fichiers
+    #   - gdown >= 6    : flag supprime car le comportement est devenu default
     if [[ -z "$GDOWN_VERSION" ]]; then
         GDOWN_VERSION="$(python -c 'import gdown; print(gdown.__version__)' 2>/dev/null || echo unknown)"
         if gdown --help 2>&1 | grep -q -- '--remaining-ok'; then
             GDOWN_FOLDER_EXTRA="--remaining-ok"
             echo "[stage] gdown $GDOWN_VERSION (--remaining-ok supporte)"
         else
-            echo "[stage] WARNING: gdown $GDOWN_VERSION sans --remaining-ok."
-            echo "[stage]          Si le folder Drive a >50 fichiers / sous-dossier,"
-            echo "[stage]          fais: pip install --upgrade --index-url https://pypi.org/simple 'gdown>=5.2.0'"
+            local gdown_major="${GDOWN_VERSION%%.*}"
+            if [[ "$gdown_major" =~ ^[0-9]+$ ]] && (( gdown_major >= 6 )); then
+                echo "[stage] gdown $GDOWN_VERSION (>=6 : download >50 fichiers en default, aucun flag requis)"
+            else
+                echo "[stage] WARNING: gdown $GDOWN_VERSION < 5.2 : limite a 50 fichiers / sous-dossier."
+                echo "[stage]          Upgrade: pip install --upgrade --index-url https://pypi.org/simple 'gdown>=5.2.0'"
+            fi
         fi
     fi
 }
@@ -174,7 +179,7 @@ if [[ -n "${GDRIVE_FOLDER_URL:-}" ]]; then
     folder_id="$(extract_gdrive_id "$GDRIVE_FOLDER_URL")"
     echo "[stage] (a) gdown du folder complet id=$folder_id -> $STAGING"
     gdown --folder "https://drive.google.com/drive/folders/$folder_id" \
-          -O "$STAGING" --remaining-ok --quiet
+          -O "$STAGING" $GDOWN_FOLDER_EXTRA --quiet
 
     echo "[stage] contenu telecharge :"
     find "$STAGING" -maxdepth 4 \( -type f -o -type d \) -printf "  %p\n" | head -40
