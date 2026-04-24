@@ -77,15 +77,68 @@ pip install --no-index --upgrade pip
 # -----------------------------------------------------------------------------
 # 4. Paquets disponibles dans le wheelhouse Alliance (pas d internet requis)
 # -----------------------------------------------------------------------------
-# torch 2.5 existe pour StdEnv/2023 + cuda 12.1. Les autres (numpy, scipy,
-# scikit-image, scikit-learn, pandas, Pillow, tqdm, matplotlib, pycocotools,
-# opencv-python, nibabel, simpleitk) sont presque tous dans le wheelhouse.
-pip install --no-index \
-    torch torchvision \
-    numpy scipy pandas pillow tqdm matplotlib \
-    scikit-image scikit-learn \
-    pycocotools nibabel simpleitk \
-    opencv-python
+# On installe paquet par paquet avec verification d import : le wheelhouse
+# Alliance peut ne pas avoir une wheel pour l architecture (x86-64-v4/
+# gentoo2023) d un paquet isole, et un pip install groupe peut ne signaler
+# aucune erreur tout en laissant une dependance manquante.
+WHEELHOUSE_PKGS=(
+    "packaging"
+    "numpy"
+    "scipy"
+    "pandas"
+    "pillow"
+    "tqdm"
+    "matplotlib"
+    "scikit-image"
+    "scikit-learn"
+    "pycocotools"
+    "nibabel"
+    "simpleitk"
+    "opencv-python"
+    "torch"
+    "torchvision"
+)
+MISSING_AFTER_INSTALL=()
+for pkg in "${WHEELHOUSE_PKGS[@]}"; do
+    pip install --no-index "$pkg" || {
+        echo "[setup] WARNING: pip install --no-index $pkg a echoue"
+    }
+done
+
+# Verification dure : chaque paquet doit etre importable.
+# On mappe nom pip -> nom d import quand ils different.
+python - <<'PY'
+import importlib, sys
+pairs = [
+    ("numpy", "numpy"),
+    ("scipy", "scipy"),
+    ("pandas", "pandas"),
+    ("PIL", "Pillow"),
+    ("tqdm", "tqdm"),
+    ("matplotlib", "matplotlib"),
+    ("skimage", "scikit-image"),
+    ("sklearn", "scikit-learn"),
+    ("pycocotools", "pycocotools"),
+    ("nibabel", "nibabel"),
+    ("SimpleITK", "simpleitk"),
+    ("cv2", "opencv-python"),
+    ("torch", "torch"),
+    ("torchvision", "torchvision"),
+    ("packaging", "packaging"),
+]
+missing = []
+for mod, pkg in pairs:
+    try:
+        importlib.import_module(mod)
+    except Exception as exc:
+        missing.append((mod, pkg, str(exc)[:200]))
+if missing:
+    print("[setup] PAQUETS MANQUANTS APRES INSTALL :")
+    for mod, pkg, err in missing:
+        print(f"  - {pkg} (import {mod}): {err}")
+    sys.exit(1)
+print("[setup] imports wheelhouse OK")
+PY
 
 # -----------------------------------------------------------------------------
 # 5. Paquets qui necessitent internet (mmengine, mmcv, mmdet, transformers...)
@@ -136,13 +189,34 @@ EOF
 fi
 
 # -----------------------------------------------------------------------------
-# 7. Diag
+# 7. Diag (vue d ensemble)
 # -----------------------------------------------------------------------------
 python - <<'PY'
-import torch
-import mmdet, mmcv, mmengine
-print(f"torch={torch.__version__}  cuda_available={torch.cuda.is_available()}")
-print(f"mmdet={mmdet.__version__}  mmcv={mmcv.__version__}  mmengine={mmengine.__version__}")
+import importlib, sys
+required = [
+    "numpy", "scipy", "pandas", "PIL", "tqdm", "matplotlib",
+    "skimage", "sklearn", "pycocotools", "nibabel", "SimpleITK", "cv2",
+    "torch", "torchvision",
+    "mmdet", "mmcv", "mmengine",
+    "transformers", "tokenizers",
+    "gdown", "typing_extensions",
+]
+missing = []
+for mod in required:
+    try:
+        importlib.import_module(mod)
+    except Exception as exc:
+        missing.append((mod, str(exc)[:200]))
+if missing:
+    print("[setup] DIAG FINAL : imports manquants :")
+    for mod, err in missing:
+        print(f"  - {mod}: {err}")
+    sys.exit(1)
+
+import torch, mmdet, mmcv, mmengine, gdown
+print(f"[setup] torch={torch.__version__}  cuda={torch.cuda.is_available()}")
+print(f"[setup] mmdet={mmdet.__version__}  mmcv={mmcv.__version__}  mmengine={mmengine.__version__}")
+print(f"[setup] gdown={gdown.__version__}")
 PY
 
 echo ""
