@@ -20,6 +20,7 @@ from agentic.dino_gemini_msd import medsam
 from agentic.dino_gemini_msd import metrics as M
 
 from .dino_v2 import LabeledBox, cascade_select_tumor_box
+from .postprocess import pad_box, postprocess_mask as _postprocess_mask
 
 
 # ---------------------------------------------------------------------------
@@ -79,10 +80,17 @@ def _summarise(df: pd.DataFrame) -> Summary:
     )
 
 
-def _segment_with_box(image_np: np.ndarray, box: LabeledBox) -> np.ndarray:
+def _segment_with_box(
+    image_np: np.ndarray,
+    box: LabeledBox,
+    pad_frac: float = 0.0,
+) -> np.ndarray:
     H, W = image_np.shape[:2]
     embed = medsam.encode_image(image_np)
-    return medsam.segment(embed, H=H, W=W, box=list(box.xyxy))
+    box_xyxy = pad_box(box.xyxy, pad_frac, H, W) if pad_frac > 0 else box.xyxy
+    # medsam.segment already runs POSTPROCESS_MASK (closing + small-component
+    # drop). We additionally apply our P2.3 chain at the caller's option.
+    return medsam.segment(embed, H=H, W=W, box=list(box_xyxy))
 
 
 def run_baseline_v2(
@@ -92,11 +100,22 @@ def run_baseline_v2(
     tumor_thr: float = 0.01,
     pancreas_margin_px: float = 20.0,
     min_overlap_ratio: float = 0.1,
+    # P2.2 — box padding before MedSAM
+    pad_frac: float = 0.0,
+    # P2.3 — extra mask post-processing (on top of medsam.postprocess_mask)
+    keep_largest: bool = False,
+    min_area_px: int = 0,
+    max_area_frac: float = 1.0,
     n: Optional[int] = None,
     data_root: Optional[Path] = None,
     progress_desc: str = "baseline-v2",
 ) -> tuple[pd.DataFrame, Summary]:
-    """DINO cascade (pancreas→tumor) → MedSAM top-1. No gating, no agent."""
+    """DINO cascade (pancreas→tumor) → MedSAM top-1. No gating, no agent.
+
+    P2.2 + P2.3 hooks:
+    - pad_frac > 0 grows the tumor box by that fraction before MedSAM
+    - keep_largest / min_area_px / max_area_frac run after MedSAM
+    """
     coco_json = Path(coco_json) if coco_json else _cfg.MSD_TEST_JSON
     data_root = Path(data_root) if data_root else Path(_cfg.MSD_ROOT)
 
@@ -129,7 +148,14 @@ def run_baseline_v2(
             decision = "empty"
         else:
             image_np = medsam.load_image(str(img_path))
-            mask = _segment_with_box(image_np, box)
+            mask = _segment_with_box(image_np, box, pad_frac=pad_frac)
+            if keep_largest or min_area_px > 0 or max_area_frac < 1.0:
+                mask = _postprocess_mask(
+                    mask,
+                    keep_largest=keep_largest,
+                    min_area_px=min_area_px,
+                    max_area_frac=max_area_frac,
+                )
             score = box.score
             decision = "tumor"
 
