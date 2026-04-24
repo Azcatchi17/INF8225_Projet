@@ -1,26 +1,53 @@
 # script_3_calibrate_threshold.py
-import os
 import json
-import numpy as np
+import os
+
 import pandas as pd
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from torchvision import transforms
-from PIL import Image
 from skimage import io
+from torchvision import transforms
 from tqdm import tqdm
+
 from mmdet.apis import init_detector, inference_detector
 from mmdet.utils import register_all_modules
+
+from msd_recall_strategy import (
+    ProposalConfig,
+    ensure_3c,
+    extract_dino_candidates,
+    find_best_threshold,
+    image_score,
+    score_candidates_with_resnet,
+)
+
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Appareil detecte : {device}")
 
 register_all_modules()
 
-# --- Modèles ---
-dino_model = init_detector('work_dirs/tumor_config_v3/tumor_config_v3.py', 
-                           'work_dirs/tumor_config_v3/best_coco_bbox_mAP_epoch_25.pth', device=device)
+# Strategie recall: DINO propose plus large, ResNet decide ensuite.
+PROPOSAL_CFG = ProposalConfig(
+    tumor_score_thresh=0.01,
+    pancreas_margin=35,
+    min_pancreas_overlap=0.05,
+    min_box_area=75,
+    max_box_area=18000,
+    top_k_candidates=5,
+    max_masks=2,
+)
+
+F_BETA = 2.0
+MAX_FP_RATE = 0.25
+
+# --- Modeles ---
+dino_model = init_detector(
+    "work_dirs/tumor_config_v3/tumor_config_v3.py",
+    "work_dirs/tumor_config_v3/best_coco_bbox_mAP_epoch_25.pth",
+    device=device,
+)
 
 ensemble_models = []
 print("Chargement de l'ensemble ResNet-18 (5 modeles)...")
@@ -33,105 +60,123 @@ for i in range(1, 6):
     model.eval()
     ensemble_models.append(model)
 
-crop_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
-])
+crop_transform = transforms.Compose(
+    [
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
+    ]
+)
 
 base_dir = "data/MSD_pancreas"
-val_json_path = os.path.join(base_dir, "val.json") # CIBLE : VALIDATION
+val_json_path = os.path.join(base_dir, "val.json")
 
-with open(val_json_path, 'r') as f:
+with open(val_json_path, "r") as f:
     val_data = json.load(f)
 
-print(f"\nDebut de la calibration sur les {len(val_data['images'])} images de validation...")
-results_list = []
+print(f"\nDebut de la calibration multi-candidats sur {len(val_data['images'])} images de validation...")
+rows = []
 
-for img_info in tqdm(val_data['images'], desc="Calibration Val Set"):
-    file_name = img_info['file_name']
+for img_info in tqdm(val_data["images"], desc="Calibration Val Set"):
+    file_name = img_info["file_name"]
     img_path = os.path.join(base_dir, file_name)
     mask_path = os.path.join(base_dir, file_name.replace("/images/", "/masks/"))
 
-    if not os.path.exists(img_path) or not os.path.exists(mask_path): continue
-        
-    img_np = io.imread(img_path)
-    img_3c = np.repeat(img_np[:, :, None], 3, axis=-1) if len(img_np.shape) == 2 else img_np
-    H, W, _ = img_3c.shape
+    if not os.path.exists(img_path) or not os.path.exists(mask_path):
+        continue
 
+    img_3c = ensure_3c(io.imread(img_path))
     true_seg_raw = io.imread(mask_path)
     has_tumor = (true_seg_raw == 2).sum() > 0
-    prob_tumor = 0.0 
 
     with torch.no_grad():
         result = inference_detector(dino_model, img_path, text_prompt="pancreas . tumor .")
-        scores = result.pred_instances.scores.cpu().numpy()
-        bboxes = result.pred_instances.bboxes.cpu().numpy()
-        labels = result.pred_instances.labels.cpu().numpy()
-        
-        pancreas_mask = (labels == 0) & (scores > 0.3)
-        tumor_mask = (labels == 1) & (scores > 0.05)    
-        
-        pancreas_boxes, pancreas_scores = bboxes[pancreas_mask], scores[pancreas_mask]
-        tumor_boxes, tumor_scores = bboxes[tumor_mask], scores[tumor_mask]
+        pred = result.pred_instances
+        candidates = extract_dino_candidates(
+            pred.scores.cpu().numpy(),
+            pred.bboxes.cpu().numpy(),
+            pred.labels.cpu().numpy(),
+            image_shape=img_3c.shape[:2],
+            config=PROPOSAL_CFG,
+        )
+        candidates = score_candidates_with_resnet(
+            img_3c,
+            candidates,
+            ensemble_models,
+            crop_transform,
+            device,
+            config=PROPOSAL_CFG,
+        )
 
-        best_tumor_box = None
+    rows.append(
+        {
+            "file_name": file_name,
+            "has_tumor": bool(has_tumor),
+            "image_score": image_score(candidates),
+            "n_candidates": len(candidates),
+            "best_dino_score": float(max([c["dino_score"] for c in candidates], default=0.0)),
+            "best_resnet_prob": image_score(candidates),
+            "candidates": candidates,
+        }
+    )
 
-        if len(pancreas_boxes) > 0 and len(tumor_boxes) > 0:
-            p_x1, p_y1, p_x2, p_y2 = pancreas_boxes[np.argmax(pancreas_scores)]
-            p_x1, p_y1 = max(0, p_x1 - 20), max(0, p_y1 - 20)
-            p_x2, p_y2 = p_x2 + 20, p_y2 + 20
+df = pd.DataFrame(
+    [
+        {k: v for k, v in row.items() if k != "candidates"}
+        for row in rows
+    ]
+)
+os.makedirs("data/results", exist_ok=True)
+df.to_csv("data/results/calibration_threshold_multi_candidate.csv", index=False)
 
-            valid_tumor_boxes, valid_tumor_scores = [], []
-            for t_box, t_score in zip(tumor_boxes, tumor_scores):
-                inter_x1, inter_y1 = max(t_box[0], p_x1), max(t_box[1], p_y1)
-                inter_x2, inter_y2 = min(t_box[2], p_x2), min(t_box[3], p_y2)
-                if inter_x2 > inter_x1 and inter_y2 > inter_y1:
-                    if ((inter_x2 - inter_x1) * (inter_y2 - inter_y1)) / ((t_box[2] - t_box[0]) * (t_box[3] - t_box[1])) >= 0.1:
-                        valid_tumor_boxes.append(t_box)
-                        valid_tumor_scores.append(t_score)
-            
-            if valid_tumor_boxes:
-                best_tumor_box = valid_tumor_boxes[np.argmax(valid_tumor_scores)]
-                
-        elif len(pancreas_boxes) == 0 and len(tumor_boxes) > 0:
-            best_tumor_box = tumor_boxes[np.argmax(tumor_scores)]
+optimal_thresh, best_metrics, sweep = find_best_threshold(
+    rows,
+    beta=F_BETA,
+    max_fp_rate=MAX_FP_RATE,
+    n_thresholds=99,
+)
 
-        if best_tumor_box is not None:
-            x1, y1, x2, y2 = map(int, best_tumor_box)
-            if 100 <= (x2 - x1) * (y2 - y1) <= 15000:
-                c_x1, c_y1 = max(0, x1 - 5), max(0, y1 - 5)
-                c_x2, c_y2 = min(W, x2 + 5), min(H, y2 + 5)
-                crop_np = img_3c[c_y1:c_y2, c_x1:c_x2]
-                
-                if crop_np.shape[0] > 0 and crop_np.shape[1] > 0:
-                    crop_tensor = crop_transform(Image.fromarray(crop_np)).unsqueeze(0).to(device)
-                    prob_tumor = sum(torch.nn.functional.softmax(model(crop_tensor), dim=1)[0][1].item() for model in ensemble_models) / 5.0
+print("\n" + "=" * 58)
+print("RECHERCHE DU SEUIL OPTIMAL MULTI-CANDIDATS")
+print("=" * 58)
+print(f"Budget FP validation : <= {MAX_FP_RATE:.0%} des scans sans tumeur")
+print(f"-> Seuil optimal : {optimal_thresh:.2f}")
+print(
+    "-> F2: {f_beta:.4f} | Recall: {recall:.2f} | Precision: {precision:.2f} | Specificity: {specificity:.2f}".format(
+        **best_metrics
+    )
+)
+print(
+    "-> Impact validation : {fp} Faux Positifs | {fn} Faux Negatifs".format(
+        **best_metrics
+    )
+)
 
-    results_list.append({'has_tumor': has_tumor, 'resnet_prob': prob_tumor})
+print("\nTable courte autour des seuils utiles:")
+for metrics in sweep:
+    t = metrics["threshold"]
+    if abs((t * 100) % 5) < 1e-6:
+        print(
+            "tau={threshold:.2f} | TP={tp:02d} FP={fp:02d} TN={tn:02d} FN={fn:02d} | "
+            "R={recall:.2f} P={precision:.2f} F2={f_beta:.3f}".format(**metrics)
+        )
 
-df = pd.DataFrame(results_list)
-
-# Ajuster ce quota en fonction de la taille du set de validation
-# Si Val contient 50 sains, 15 FP est correct. Si Val contient 100 sains, mettre 30 FP.
-MAX_FAUX_POSITIFS = int(len(df[df['has_tumor'] == False]) * 0.30) 
-
-best_f2 = -1.0
-optimal_thresh = 0.5
-
-for t in np.linspace(0.01, 0.99, 99):
-    tp = len(df[(df['has_tumor'] == True) & (df['resnet_prob'] >= t)])
-    fn = len(df[(df['has_tumor'] == True) & (df['resnet_prob'] < t)])
-    fp = len(df[(df['has_tumor'] == False) & (df['resnet_prob'] >= t)])
-    
-    if fp > MAX_FAUX_POSITIFS or (tp + fp) == 0 or (tp + fn) == 0: continue
-        
-    precision, recall = tp / (tp + fp), tp / (tp + fn)
-    f_beta = (5 * precision * recall) / ((4 * precision) + recall)
-    
-    if f_beta > best_f2:
-        best_f2, optimal_thresh = f_beta, t
-
-print(f"\n-> Seuil Optimal trouve sur Validation : {optimal_thresh:.2f} (Sauvegarde dans optimal_threshold.txt)")
 with open("optimal_threshold.txt", "w") as f:
-    f.write(str(optimal_thresh))
+    f.write(f"{optimal_thresh:.2f}")
+
+with open("optimal_threshold.json", "w") as f:
+    json.dump(
+        {
+            "threshold": optimal_thresh,
+            "metrics": best_metrics,
+            "proposal_config": PROPOSAL_CFG.to_dict(),
+            "f_beta": F_BETA,
+            "max_fp_rate": MAX_FP_RATE,
+            "sweep": sweep,
+        },
+        f,
+        indent=2,
+    )
+
+print("\nSauvegarde : optimal_threshold.txt, optimal_threshold.json")
+print("Details candidats : data/results/calibration_threshold_multi_candidate.csv")
