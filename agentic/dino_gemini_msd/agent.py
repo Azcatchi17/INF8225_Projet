@@ -11,7 +11,7 @@ from .actions import apply_action, is_action_sane
 from .gemma import MaskAction
 from .logging_utils import log_run
 from .models import get_gemma_client
-from .state import AgentState, GemmaAction, IterationResult, MaskMetrics
+from .state import AgentState, Box, GemmaAction, IterationResult, MaskMetrics
 
 
 def _box_center(box: list[float]) -> tuple[float, float]:
@@ -73,6 +73,8 @@ def run_agent(
     max_iter: int = config.MAX_ITER,
     gt_mask: np.ndarray | None = None,
     persist: bool = True,
+    use_gating: bool = False,
+    gating_kwargs: dict | None = None,
 ) -> AgentState:
     state = AgentState.new(image_path, user_text)
     state.image_np = medsam.load_image(image_path)
@@ -97,6 +99,44 @@ def run_agent(
         if persist:
             log_run(state)
         return state
+
+    # 2b. Optional pancreas-ROI / threshold / VLM gate — hard-reject obvious
+    # no-tumor slices before any MedSAM work. Produces an empty result state
+    # on rejection instead of segmenting a hallucinated box.
+    if use_gating:
+        from .gating import infer_gated
+        gk = dict(gating_kwargs or {})
+        gk.setdefault("text", state.refined_prompt)
+        gate = infer_gated(image_path, **gk)
+        if not gate.is_tumor_detected:
+            state.stop_reason = f"gated:{gate.decision}"
+            state.candidate_boxes = []  # convention: empty when rejected
+            # Return an in-memory empty mask iteration so eval code sees DICE=0
+            empty_iter = IterationResult(
+                iteration=0,
+                box_used_xyxy=[],
+                points_used=[],
+                point_labels=[],
+                metrics=M.mask_metrics(np.zeros((H, W), np.uint8), None, gt_mask),
+                gemma_action=None,
+                dice_vs_gt=(
+                    M.dice(np.zeros((H, W), np.uint8), gt_mask) if gt_mask is not None else None
+                ),
+                elapsed_ms=0.0,
+                mask=np.zeros((H, W), np.uint8),
+            )
+            state.push_iter(empty_iter)
+            if persist:
+                log_run(state)
+            return state
+        # Gate survived — promote its selected box to the head of the list
+        if gate.selected_box is not None:
+            gate_box = tuple(gate.selected_box)
+            gate_score = float(gate.selected_score)
+            # Rebuild candidate_boxes with the gated box first
+            new_candidates = [Box(xyxy=gate_box, score=gate_score)]
+            new_candidates.extend(b for b in state.candidate_boxes if tuple(b.xyxy) != gate_box)
+            state.candidate_boxes = new_candidates
 
     # 3. MedSAM: encode image ONCE, cache in state
     state.image_embed = medsam.encode_image(state.image_np)

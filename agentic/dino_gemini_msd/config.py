@@ -36,9 +36,31 @@ TRUST_COMPACTNESS = 0.5
 TRUST_MAX_COMPONENTS = 1
 
 # --- Phase 2: MedSAM improvements ----------------------------------------
-POSTPROCESS_MASK = True         
-POSTPROCESS_MIN_COMPONENT = 0.05  
-ENSEMBLE_TOP_K = 3              
+POSTPROCESS_MASK = True
+POSTPROCESS_MIN_COMPONENT = 0.05
+ENSEMBLE_TOP_K = 3
+
+# --- Phase 3: pancreas-ROI gated pipeline --------------------------------
+# G1 — pancreas ROI
+PANCREAS_CKPT = PROJECT_ROOT / "work_dirs" / "pancreas_unet" / "best.pt"
+PANCREAS_DILATION_PX = 35           # morpho-dilate the UNet mask to absorb border tumors
+MIN_PANCREAS_AREA_PX = 200          # below this, declare "no pancreas on this slice"
+
+# G2 — tumor detection filter
+MIN_PANCREAS_OVERLAP = 0.05         # fraction of candidate box area that must fall inside pancreas mask
+MIN_CENTER_IN_MASK = False          # require the box centroid to lie on the pancreas mask
+CLIP_MASK_TO_PANCREAS_ROI = False   # final AND between MedSAM mask and pancreas ROI
+
+# G2.5 — dual-prompt differential (optional)
+DUAL_PROMPT_DISTRACTORS = [
+    "normal pancreas tissue",
+    "bowel gas",
+    "abdominal organ",
+]
+DUAL_PROMPT_ALPHA = 0.5             # weight on max distractor score in differential
+
+# G3 — tumor-presence threshold (CALIBRATE on val, then hard-code the result here)
+TUMOR_DIFF_THRESHOLD = 0.25
 
 # --- Gemma / Gemini --------------------------------------------------------
 # Correction des identifiants (voir analyse ci-dessous)
