@@ -48,10 +48,27 @@ mkdir -p "$TAMIA_ASSETS" "$DEST_DINO_DIR" "$DEST_MEDSAM_DIR"
 # -----------------------------------------------------------------------------
 # Helpers
 # -----------------------------------------------------------------------------
+GDOWN_FOLDER_EXTRA=""
+GDOWN_VERSION=""
+
 require_gdown() {
     if ! command -v gdown >/dev/null 2>&1; then
         echo "[stage] ERREUR: gdown absent. Lance d abord experiments/tamia/setup_env.sh" >&2
         exit 1
+    fi
+    # Detection version + presence de --remaining-ok (ajoute en gdown 5.2).
+    # Si absent, on affiche un warning ; si le folder Drive a > 50 fichiers par
+    # sous-dossier (cas MSD_pancreas), il faudra upgrade gdown.
+    if [[ -z "$GDOWN_VERSION" ]]; then
+        GDOWN_VERSION="$(python -c 'import gdown; print(gdown.__version__)' 2>/dev/null || echo unknown)"
+        if gdown --help 2>&1 | grep -q -- '--remaining-ok'; then
+            GDOWN_FOLDER_EXTRA="--remaining-ok"
+            echo "[stage] gdown $GDOWN_VERSION (--remaining-ok supporte)"
+        else
+            echo "[stage] WARNING: gdown $GDOWN_VERSION sans --remaining-ok."
+            echo "[stage]          Si le folder Drive a >50 fichiers / sous-dossier,"
+            echo "[stage]          fais: pip install --upgrade --index-url https://pypi.org/simple 'gdown>=5.2.0'"
+        fi
     fi
 }
 
@@ -87,7 +104,7 @@ download_gdrive_folder() {
     echo "[stage] gdown --folder id=$id -> $destination"
     # --remaining-ok : continue meme si Drive bride (>50 fichiers par folder).
     gdown --folder "https://drive.google.com/drive/folders/$id" \
-          -O "$destination" --remaining-ok --quiet
+          -O "$destination" $GDOWN_FOLDER_EXTRA --quiet
 }
 
 download_gdrive_file() {

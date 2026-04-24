@@ -111,12 +111,17 @@ pip install "addict" "yapf" "terminaltables" "shapely" || true
 # gdown : necessaire si stage_assets.sh doit tirer les assets depuis Google
 # Drive (voie A du README). Harmless sinon.
 #
-# typing_extensions est explicitement upgrade : gdown 5.x importe
-# `typing_extensions.Unpack` (necessite >= 4.5). Le wheelhouse Alliance a
-# parfois une version plus ancienne installee en transitive et pip n upgrade
-# pas automatiquement -> ModuleNotFoundError a l import.
+# typing_extensions upgrade : gdown 5.x importe `typing_extensions.Unpack`
+# (necessite >= 4.5). Le wheelhouse Alliance fournit parfois une version plus
+# ancienne installee en transitive.
 pip install --upgrade "typing_extensions>=4.12"
-pip install "gdown>=5.1.0"
+
+# gdown : on force >= 5.2 depuis PyPI (le wheelhouse Alliance fige en 5.1 sans
+# --remaining-ok, necessaire pour les folders Drive > 50 fichiers comme
+# MSD_pancreas).
+pip install --upgrade --no-cache-dir \
+    --index-url https://pypi.org/simple \
+    "gdown>=5.2.0"
 
 # -----------------------------------------------------------------------------
 # 6. .gitignore local pour les logs
