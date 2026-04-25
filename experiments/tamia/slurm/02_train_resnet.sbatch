@@ -8,9 +8,8 @@
 # crops de data/classifier_dataset_hard/. Produit resnet_fold_{1..5}.pth +
 # threshold_run_{1..5}.txt.
 #
-# Note TamIA : le script est sequentiel, 1 GPU suffit. Un noeud complet est
-# reserve de toute facon (billing per-node). Si tu veux paralleliser les 5
-# folds, voir 02b_train_resnet_array.sbatch.
+# Note TamIA : le script est sequentiel et utilise cuda:0. Le scheduler exige
+# quand meme un noeud GPU complet (`--gpus-per-node=h100:4`).
 
 #SBATCH --job-name=msd-02-train-resnet
 #SBATCH --output=experiments/tamia/logs/02_train_resnet-%j.out
@@ -18,7 +17,7 @@
 #SBATCH --time=03:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:1
+#SBATCH --gpus-per-node=h100:4
 #SBATCH --mem=0
 #SBATCH --signal=B:TERM@120
 

@@ -5,7 +5,8 @@
 #   python calibrate_dino.py
 #
 # Balaie une grille de seuils DINO sur val.json et imprime la table TP/FN/FP.
-# GPU : 1x H100 suffit largement (200 scans val, ~1s/scan).
+# TamIA alloue les GPUs par noeud entier : on demande donc H100:4, meme si le
+# script n utilise qu un GPU.
 #
 # Soumission directe :
 #   sbatch --export=ALL experiments/tamia/slurm/00_calibrate_dino.sbatch
@@ -19,7 +20,7 @@
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:1
+#SBATCH --gpus-per-node=h100:4
 #SBATCH --mem=0
 #SBATCH --signal=B:TERM@120
 

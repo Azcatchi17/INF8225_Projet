@@ -8,7 +8,7 @@
 #   data/results/dice_final_report_msd_recall.csv
 #
 # MedSAM charge un ViT-B (~2G sur GPU) et on garde les 5 ResNet + DINO en
-# meme temps : 1x H100 suffit, mais prevois ~10G de VRAM.
+# meme temps. Le script utilise cuda:0, mais TamIA exige un noeud H100:4.
 
 #SBATCH --job-name=msd-04-test-recall
 #SBATCH --output=experiments/tamia/logs/04_test_recall-%j.out
@@ -16,7 +16,7 @@
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:1
+#SBATCH --gpus-per-node=h100:4
 #SBATCH --mem=0
 #SBATCH --signal=B:TERM@120
 

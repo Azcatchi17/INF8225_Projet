@@ -22,11 +22,12 @@ CLUSTER_USER="dchikhi"
 # =============================================================================
 # 2. Type de GPU demande
 # =============================================================================
-# Format Alliance Canada: --gres=gpu:<type>:<n>. Sur les autres clusters Alliance
-# le type est le code du GPU (a100, v100l, ...). Pour TamIA c est h100 ou h200.
-# H100 = ~12.15 RGU / noeud (source Mila docs). H200 = plus cher.
+# TamIA n alloue les GPUs QUE par noeud entier. Le scheduler exige le format
+# --gpus-per-node=<type>:<n> (pas --gres=gpu:...). Un noeud H100 = 4 GPUs.
+# Tu reserves donc 4 H100 a chaque job ; meme si nos scripts n en utilisent
+# qu un, le noeud est facture en entier de toute facon.
 GPU_TYPE="h100"
-GPUS_PER_NODE="1"
+GPUS_PER_NODE="4"
 
 # =============================================================================
 # 3. Arborescence TamIA
@@ -39,9 +40,11 @@ GPUS_PER_NODE="1"
 # Sur TamIA les equivalents sont typiquement les memes var env ($SCRATCH etc.).
 # On n utilise ici que $HOME et $SCRATCH. L allocation AIP (aip-azouaq) donne
 # potentiellement un /project/aip-azouaq/ partage mais pas obligatoire.
-TAMIA_REPO="$SCRATCH/INF8225_Projet"
-TAMIA_ASSETS="$SCRATCH/INF8225_assets"
-TAMIA_VENV="$HOME/envs/msd_recall"
+TAMIA_SCRATCH_BASE="${SCRATCH:-/scratch/d/${CLUSTER_USER}}"
+TAMIA_HOME_BASE="${HOME:-/home/${CLUSTER_USER}}"
+TAMIA_REPO="${TAMIA_REPO:-${TAMIA_SCRATCH_BASE}/INF8225_Projet}"
+TAMIA_ASSETS="${TAMIA_ASSETS:-${TAMIA_SCRATCH_BASE}/INF8225_assets}"
+TAMIA_VENV="${TAMIA_VENV:-${TAMIA_HOME_BASE}/envs/msd_recall}"
 
 # =============================================================================
 # 4. Sources des assets (Google Drive partage par Morad)

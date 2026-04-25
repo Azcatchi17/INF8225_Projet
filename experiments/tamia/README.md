@@ -19,7 +19,7 @@ sans modifier aucun des scripts python existants, en chainant les etapes via `sb
 ## 0. Rappel TamIA
 
 - TamIA est equipe de **H100 (80G)** et **H200 (141G)**.
-- L allocation est **par noeud, pas par CPU** : meme un job a 1 GPU mobilise un noeud entier. On met donc `--mem=0` pour prendre toute la RAM.
+- L allocation GPU est **par noeud entier** : TamIA refuse `--gres=gpu:1` et demande par exemple `--gpus-per-node=h100:4`. On met donc `--mem=0` pour prendre toute la RAM du noeud.
 - Le compte n est pas un compte DRAC classique (`def-`/`rrg-`) mais un compte **AIP** : `--account=aip-<nom_du_prof>`. Ton prof doit t ajouter a son allocation AIP avant le premier sbatch.
 - Les noeuds de **calcul** n ont pas d internet : tous les `pip install` se font sur le **noeud de login**.
 - Ref : https://docs.alliancecan.ca/wiki/TamIA
@@ -89,7 +89,9 @@ cd INF8225_Projet
 | `PI_NAME` | `azouaq` | edite si ton allocation AIP n est pas `aip-azouaq` |
 | `CLUSTER_USER` | `dchikhi` | mets ton username TamIA (utilise pour rsync exterieur) |
 | `GPU_TYPE` | `h100` | `h200` si tu vises specifiquement les 141G |
-| `GDRIVE_FOLDER_URL` | folder Morad | OK tant que le folder reste partage en lecture |
+| `GPUS_PER_NODE` | `4` | garder `4` sur H100, sauf consigne TamIA differente |
+| `GDRIVE_FOLDER_URL` | vide | on utilise les sources Drive fichier-par-fichier ci-dessous |
+| `MSD_SOURCE` / `DINO_*_SOURCE` / `MEDSAM_CKPT_SOURCE` | IDs Drive Projet_tamia | OK tant que les fichiers restent partages en lecture |
 
 Aucun edit n est necessaire si tu executes depuis le compte `dchikhi` avec l allocation `aip-azouaq`.
 
@@ -116,17 +118,17 @@ Ce script :
 bash experiments/tamia/stage_assets.sh
 ```
 
-**Par defaut** (et c est le cas cible si tu clones juste depuis GitHub sans assets locaux), le script utilise `GDRIVE_FOLDER_URL` de `config.sh` et tire tout le folder Google Drive via `gdown` :
+**Par defaut** (et c est le cas cible si tu clones juste depuis GitHub sans assets locaux), `config.sh` utilise des sources Drive fichier-par-fichier. C est plus robuste sur TamIA/gdown pour les gros fichiers et le zip MSD :
 
 ```
-Drive folder (prerempli dans config.sh)
-  ├── MSD_pancreas/                             -> $TAMIA_ASSETS/MSD_pancreas/
-  ├── best_coco_bbox_mAP_epoch_25.pth           -> $TAMIA_ASSETS/work_dirs/tumor_config_v3/
-  ├── tumor_config_v3.py    (optionnel)         -> idem (fallback: copie depuis le repo)
-  └── medsam_vit_b.pth                          -> $TAMIA_ASSETS/MedSAM_work_dir/MedSAM/
+Drive files (preremplis dans config.sh)
+  ├── MSD_pancreas.zip                           -> $TAMIA_ASSETS/MSD_pancreas/
+  ├── best_coco_bbox_mAP_epoch_25.pth            -> $TAMIA_ASSETS/work_dirs/tumor_config_v3/
+  ├── tumor_config_v3.py                         -> idem
+  └── medsam_vit_b.pth                           -> $TAMIA_ASSETS/MedSAM_work_dir/MedSAM/
 ```
 
-Le folder Drive doit etre **partage en lecture** avec le compte Google de celui qui execute (le plus simple : "Anyone with the link").
+Les fichiers Drive doivent etre **partages en lecture** avec le compte Google de celui qui execute (le plus simple : "Anyone with the link").
 
 **Sources alternatives** (pour overrider fichier par fichier) via `config.sh` :
 
@@ -186,17 +188,17 @@ bash experiments/tamia/submit_all.sh --dry-run        # affiche sans soumettre
 ### 3.2 Soumettre une etape isolement
 
 ```bash
-sbatch --account=aip-$PI_NAME --gres=gpu:h100:1 \
+sbatch --account=aip-$PI_NAME --gpus-per-node=h100:4 \
     experiments/tamia/slurm/00_calibrate_dino.sbatch
 ```
 
-Les options `--account` et `--gres` sont redondantes si deja definies dans le header sbatch, mais elles permettent d overrider sans editer le fichier.
+Les options `--account` et `--gpus-per-node` sont redondantes si deja definies dans le header sbatch, mais elles permettent d overrider sans editer le fichier.
 
 ### 3.3 Suivre les jobs
 
 ```bash
 squeue -u $USER
-sacct -u $USER --starttime=today --format=JobID,JobName,State,Elapsed,ReqGRES
+sacct -u $USER --starttime=today --format=JobID,JobName,State,Elapsed,AllocTRES%60
 tail -f experiments/tamia/logs/00_calibrate_dino-*.out
 ```
 
@@ -235,13 +237,13 @@ Valeurs par defaut (ajustables via `config.sh`) :
 
 | Etape | GPU | Duree | Notes |
 |---|---|---|---|
-| 00 calibrate_dino | 1x H100 | 30 min | 100 images val, inference DINO seule |
-| 01 extract_hard_negatives | 1x H100 | 90 min | DINO sur ~900 images train + 100 val |
-| 02 train_resnet | 1x H100 | 3 h | 5 folds x 15 epochs, sequentiel |
-| 03 calibrate_threshold | 1x H100 | 45 min | DINO + ensemble ResNet sur val |
-| 04 test_recall | 1x H100 | 60 min | DINO + ResNet + MedSAM sur test |
+| 00 calibrate_dino | noeud H100:4 | 30 min | 100 images val, inference DINO seule |
+| 01 extract_hard_negatives | noeud H100:4 | 90 min | DINO sur ~900 images train + 100 val |
+| 02 train_resnet | noeud H100:4 | 3 h | 5 folds x 15 epochs, sequentiel |
+| 03 calibrate_threshold | noeud H100:4 | 45 min | DINO + ensemble ResNet sur val |
+| 04 test_recall | noeud H100:4 | 60 min | DINO + ResNet + MedSAM sur test |
 
-Note facturation TamIA : chaque job reserve un noeud complet (H100 = 12.15 RGUs / noeud pour 1 GPU). Meme avec `--gres=gpu:h100:1`, tu paies le noeud. Si tu veux amortir, tu peux paralleliser 4 jobs sur un meme noeud via `srun --exclusive` et un orchestrateur custom ; pas fait par defaut ici pour garder le scenario simple.
+Note facturation TamIA : chaque job reserve un noeud complet. Le scheduler demande explicitement `--gpus-per-node=h100:4`; nos scripts n utilisent qu un GPU (`cuda:0`), mais le noeud complet est alloue. Si tu veux amortir, tu peux paralleliser 4 jobs sur un meme noeud via `srun --exclusive` et un orchestrateur custom ; pas fait par defaut ici pour garder le scenario simple.
 
 ---
 

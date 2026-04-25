@@ -13,7 +13,7 @@
 #SBATCH --time=01:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:1
+#SBATCH --gpus-per-node=h100:4
 #SBATCH --mem=0
 #SBATCH --signal=B:TERM@120
 

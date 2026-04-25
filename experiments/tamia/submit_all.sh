@@ -38,16 +38,16 @@ EOF
 done
 
 STEPS=(
-  "00:00_calibrate_dino.sbatch:$SLURM_TIME_DINO"
-  "01:01_extract_hard_negatives.sbatch:$SLURM_TIME_EXTRACT"
-  "02:02_train_resnet.sbatch:$SLURM_TIME_TRAIN"
-  "03:03_calibrate_threshold.sbatch:$SLURM_TIME_CALIB"
-  "04:04_test_recall.sbatch:$SLURM_TIME_TEST"
+  "00|00_calibrate_dino.sbatch|$SLURM_TIME_DINO"
+  "01|01_extract_hard_negatives.sbatch|$SLURM_TIME_EXTRACT"
+  "02|02_train_resnet.sbatch|$SLURM_TIME_TRAIN"
+  "03|03_calibrate_threshold.sbatch|$SLURM_TIME_CALIB"
+  "04|04_test_recall.sbatch|$SLURM_TIME_TEST"
 )
 
 common_args=(
     "--account=$SLURM_ACCOUNT"
-    "--gres=gpu:${GPU_TYPE}:${GPUS_PER_NODE}"
+    "--gpus-per-node=${GPU_TYPE}:${GPUS_PER_NODE}"
     "--parsable"
 )
 if [[ -n "${SLURM_MAIL_USER:-}" ]]; then
@@ -56,10 +56,7 @@ fi
 
 prev_jid=""
 for spec in "${STEPS[@]}"; do
-    step="${spec%%:*}"
-    rest="${spec#*:}"
-    sbatch_file="${rest%%:*}"
-    time_limit="${rest##*:}"
+    IFS='|' read -r step sbatch_file time_limit <<< "$spec"
 
     if [[ -n "$ONLY" && "$step" != "$ONLY" ]]; then
         continue
