@@ -181,7 +181,21 @@ if [[ -n "${GDRIVE_FOLDER_URL:-}" ]]; then
     gdown --folder "https://drive.google.com/drive/folders/$folder_id" \
           -O "$STAGING" $GDOWN_FOLDER_EXTRA --quiet
 
-    echo "[stage] contenu telecharge :"
+    # Drive rate-limit par fichier : pour les dossiers avec beaucoup de PNGs
+    # (MSD_pancreas, classifier_dataset_hard) on s attend a des zips. On les
+    # decompresse en place avant le dispatch par nom.
+    while IFS= read -r -d '' archive; do
+        echo "[stage] unzip $archive"
+        unzip -q -o "$archive" -d "$(dirname "$archive")"
+        rm -f "$archive"
+    done < <(find "$STAGING" -type f -name "*.zip" -print0)
+    while IFS= read -r -d '' archive; do
+        echo "[stage] tar -xzf $archive"
+        tar -xzf "$archive" -C "$(dirname "$archive")"
+        rm -f "$archive"
+    done < <(find "$STAGING" -type f \( -name "*.tar.gz" -o -name "*.tgz" \) -print0)
+
+    echo "[stage] contenu telecharge (apres unzip) :"
     find "$STAGING" -maxdepth 4 \( -type f -o -type d \) -printf "  %p\n" | head -40
 
     # --- dispatch : dataset MSD_pancreas ---------------------------------------
