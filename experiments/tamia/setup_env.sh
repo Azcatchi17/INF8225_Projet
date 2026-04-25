@@ -155,6 +155,11 @@ mim install "mmdet==3.3.0"
 # encoder.
 pip install "transformers==4.33.0" "tokenizers==0.13.3"
 
+# Grounding DINO dans mmdet active un chemin memoire qui requiert fairscale
+# pour construire le transformer encoder. Sans ca, init_detector echoue avant
+# meme de charger le checkpoint.
+pip install "fairscale>=0.4.13"
+
 # MedSAM est installe en editable depuis le sous-dossier clone.
 pip install -e "$TAMIA_REPO/MedSAM"
 
@@ -199,6 +204,7 @@ required = [
     "torch", "torchvision",
     "mmdet", "mmcv", "mmengine",
     "transformers", "tokenizers",
+    "fairscale",
     "gdown", "typing_extensions",
 ]
 missing = []

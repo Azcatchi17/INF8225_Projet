@@ -255,6 +255,13 @@ Note facturation TamIA : chaque job reserve un noeud complet. Le scheduler deman
 
 **`mmcv` echoue a compiler** : re-execute `setup_env.sh` avec `CUDA_HOME` exporte explicitement. Sur Alliance : `export CUDA_HOME=$(dirname $(dirname $(which nvcc)))`.
 
+**`NotImplementedError: ... install fairscale` au lancement de DINO** : le venv date d avant l ajout de `fairscale`. Sur le login node :
+
+```bash
+source ~/envs/msd_recall/bin/activate
+pip install "fairscale>=0.4.13"
+```
+
 **`sbatch: error: Invalid account`** : ton prof ne t a pas encore ajoute a l allocation AIP, ou `PI_NAME` dans `config.sh` est faux.
 
 **Le job reste `PD` avec raison `(QOSMinCpuNotSatisfied)`** : TamIA alloue par noeud; retire `--cpus-per-task` et laisse `--mem=0`. Les headers sbatch livres ici sont deja conformes.
