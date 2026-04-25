@@ -42,6 +42,7 @@ PROPOSAL_CFG = ProposalConfig(
 
 F_BETA = 2.0
 MAX_FP_RATE = 0.25
+MIN_RECALL = 0.90
 
 # --- Modeles ---
 dino_model = init_detector(
@@ -118,7 +119,8 @@ for img_info in tqdm(val_data["images"], desc="Calibration Val Set"):
             "image_score": image_score(candidates),
             "n_candidates": len(candidates),
             "best_dino_score": float(max([c["dino_score"] for c in candidates], default=0.0)),
-            "best_resnet_prob": image_score(candidates),
+            "best_resnet_prob": float(max([c.get("resnet_prob", 0.0) for c in candidates], default=0.0)),
+            "best_candidate_score": image_score(candidates),
             "candidates": candidates,
         }
     )
@@ -136,13 +138,16 @@ optimal_thresh, best_metrics, sweep = find_best_threshold(
     rows,
     beta=F_BETA,
     max_fp_rate=MAX_FP_RATE,
+    min_recall=MIN_RECALL,
     n_thresholds=99,
 )
+pd.DataFrame(sweep).to_csv("data/results/threshold_sweep_multi_candidate.csv", index=False)
 
 print("\n" + "=" * 58)
 print("RECHERCHE DU SEUIL OPTIMAL MULTI-CANDIDATS")
 print("=" * 58)
 print(f"Budget FP validation : <= {MAX_FP_RATE:.0%} des scans sans tumeur")
+print(f"Objectif recall validation : >= {MIN_RECALL:.0%} si possible")
 print(f"-> Seuil optimal : {optimal_thresh:.2f}")
 print(
     "-> F2: {f_beta:.4f} | Recall: {recall:.2f} | Precision: {precision:.2f} | Specificity: {specificity:.2f}".format(
@@ -175,6 +180,7 @@ with open("optimal_threshold.json", "w") as f:
             "proposal_config": PROPOSAL_CFG.to_dict(),
             "f_beta": F_BETA,
             "max_fp_rate": MAX_FP_RATE,
+            "min_recall": MIN_RECALL,
             "sweep": sweep,
         },
         f,
@@ -183,3 +189,4 @@ with open("optimal_threshold.json", "w") as f:
 
 print("\nSauvegarde : optimal_threshold.txt, optimal_threshold.json")
 print("Details candidats : data/results/calibration_threshold_multi_candidate.csv")
+print("Sweep seuils : data/results/threshold_sweep_multi_candidate.csv")

@@ -1,6 +1,8 @@
 # script_4_test_final_recall.py
 import json
 import os
+import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -14,11 +16,16 @@ from tqdm import tqdm
 from mmdet.apis import init_detector, inference_detector
 from mmdet.utils import register_all_modules
 
+MEDSAM_DIR = Path(__file__).resolve().parent / "MedSAM"
+if MEDSAM_DIR.is_dir() and str(MEDSAM_DIR) not in sys.path:
+    sys.path.insert(0, str(MEDSAM_DIR))
+
 from MedSAM.MedSAM_Inference import medsam_inference
 from MedSAM.segment_anything import sam_model_registry
 
 from msd_recall_strategy import (
     ProposalConfig,
+    candidate_score,
     ensure_3c,
     extract_dino_candidates,
     get_resnet_checkpoint_dir,
@@ -37,22 +44,31 @@ def calculate_dice(mask_true, mask_pred):
 
 
 def load_threshold_and_config():
+    threshold_override = os.environ.get("RESNET_THRESHOLD_OVERRIDE")
+
     if os.path.exists("optimal_threshold.json"):
         with open("optimal_threshold.json", "r") as f:
             data = json.load(f)
         threshold = float(data["threshold"])
         cfg = ProposalConfig(**data.get("proposal_config", {}))
         print(f"Seuil charge depuis optimal_threshold.json : {threshold:.2f}")
+        if threshold_override is not None:
+            threshold = float(threshold_override)
+            print(f"Override RESNET_THRESHOLD_OVERRIDE : {threshold:.2f}")
         return threshold, cfg
 
     if os.path.exists("optimal_threshold.txt"):
         with open("optimal_threshold.txt", "r") as f:
             threshold = float(f.read().strip())
         print(f"Seuil charge depuis optimal_threshold.txt : {threshold:.2f}")
+        if threshold_override is not None:
+            threshold = float(threshold_override)
+            print(f"Override RESNET_THRESHOLD_OVERRIDE : {threshold:.2f}")
         return threshold, ProposalConfig()
 
-    print("Aucun seuil calibre trouve. Seuil force a 0.25.")
-    return 0.25, ProposalConfig()
+    threshold = float(threshold_override) if threshold_override is not None else 0.25
+    print(f"Aucun seuil calibre trouve. Seuil force a {threshold:.2f}.")
+    return threshold, ProposalConfig()
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -157,6 +173,7 @@ for img_info in tqdm(test_images_list, desc="Inference Test"):
 
     final_dice = calculate_dice(true_seg, full_medsam_seg)
     best_score = image_score(candidates)
+    best_prob = max([float(c.get("resnet_prob", 0.0)) for c in candidates], default=0.0)
     best_dino = max([c["dino_score"] for c in candidates], default=0.0)
 
     fn_cause = ""
@@ -175,8 +192,10 @@ for img_info in tqdm(test_images_list, desc="Inference Test"):
             "final_dice": final_dice,
             "n_candidates": len(candidates),
             "n_selected": len(selected),
-            "best_resnet_prob": best_score,
+            "best_candidate_score": best_score,
+            "best_resnet_prob": best_prob,
             "best_dino_score": best_dino,
+            "selected_scores": [candidate_score(c) for c in selected],
             "fn_cause": fn_cause,
         }
     )

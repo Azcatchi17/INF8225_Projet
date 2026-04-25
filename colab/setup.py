@@ -404,6 +404,7 @@ def setup(
 
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
+    pythonpath_parts = [str(project_root)]
 
     # MedSAM's vendored segment_anything uses absolute imports
     # (`from segment_anything.modeling import Sam`), so the MedSAM folder
@@ -411,6 +412,12 @@ def setup(
     medsam_dir = project_root / "MedSAM"
     if medsam_dir.is_dir() and str(medsam_dir) not in sys.path:
         sys.path.insert(0, str(medsam_dir))
+    if medsam_dir.is_dir():
+        pythonpath_parts.append(str(medsam_dir))
+    existing_pythonpath = os.environ.get("PYTHONPATH", "")
+    if existing_pythonpath:
+        pythonpath_parts.append(existing_pythonpath)
+    os.environ["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
 
     # Run nltk downloads in a subprocess: if the kernel already had numpy
     # preloaded (Colab's default), the in-memory numpy can mismatch the

@@ -27,6 +27,7 @@ class ProposalConfig:
     nms_iou: float = 0.50
     crop_margin: int = 8
     max_masks: int = 2
+    resnet_std_penalty: float = 0.25
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -231,19 +232,28 @@ def score_candidates_with_resnet(
 
     scored = [dict(c) for c in candidates]
     for local_idx, cand_idx in enumerate(valid_indices):
-        scored[cand_idx]["resnet_prob"] = float(mean_probs[local_idx])
-        scored[cand_idx]["resnet_std"] = float(std_probs[local_idx])
+        mean_prob = float(mean_probs[local_idx])
+        std_prob = float(std_probs[local_idx])
+        scored[cand_idx]["resnet_prob"] = mean_prob
+        scored[cand_idx]["resnet_std"] = std_prob
         scored[cand_idx]["resnet_votes_050"] = int((probs_by_model[:, local_idx] >= 0.50).sum())
+        scored[cand_idx]["resnet_score"] = float(
+            np.clip(mean_prob - cfg.resnet_std_penalty * std_prob, 0.0, 1.0)
+        )
 
     scored = [c for c in scored if "resnet_prob" in c]
-    scored.sort(key=lambda c: (-float(c["resnet_prob"]), -float(c["dino_score"])))
+    scored.sort(key=lambda c: (-candidate_score(c), -float(c["dino_score"])))
     return scored
+
+
+def candidate_score(candidate: dict) -> float:
+    return float(candidate.get("resnet_score", candidate.get("resnet_prob", 0.0)))
 
 
 def image_score(candidates: list[dict]) -> float:
     if not candidates:
         return 0.0
-    return float(max(c.get("resnet_prob", 0.0) for c in candidates))
+    return float(max(candidate_score(c) for c in candidates))
 
 
 def select_positive_candidates(
@@ -252,8 +262,8 @@ def select_positive_candidates(
     config: ProposalConfig | None = None,
 ) -> list[dict]:
     cfg = config or ProposalConfig()
-    selected = [c for c in candidates if float(c.get("resnet_prob", 0.0)) >= threshold]
-    selected.sort(key=lambda c: (-float(c["resnet_prob"]), -float(c["dino_score"])))
+    selected = [c for c in candidates if candidate_score(c) >= threshold]
+    selected.sort(key=lambda c: (-candidate_score(c), -float(c["dino_score"])))
     return selected[: cfg.max_masks]
 
 
@@ -298,6 +308,7 @@ def find_best_threshold(
     beta: float = 2.0,
     max_fp_rate: float = 0.25,
     n_thresholds: int = 99,
+    min_recall: float = 0.90,
 ) -> tuple[float, dict, list[dict]]:
     n_neg = sum(1 for row in rows if not row["has_tumor"])
     max_fp = int(np.floor(n_neg * max_fp_rate))
@@ -305,6 +316,7 @@ def find_best_threshold(
 
     sweep = [threshold_metrics(rows, float(t), beta=beta) for t in thresholds]
     feasible = [m for m in sweep if m["fp"] <= max_fp]
-    pool = feasible if feasible else sweep
-    best = max(pool, key=lambda m: (m["f_beta"], m["recall"], -m["fp"], m["precision"]))
+    recall_pool = [m for m in feasible if m["recall"] >= min_recall]
+    pool = recall_pool or feasible or sweep
+    best = max(pool, key=lambda m: (m["recall"], m["f_beta"], -m["fp"], m["precision"]))
     return float(best["threshold"]), best, sweep

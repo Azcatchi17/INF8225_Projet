@@ -40,20 +40,27 @@ dino_model = init_detector(dino_config, dino_checkpoint, device=device)
 base_dir = "data/MSD_pancreas"
 output_base_dir = "data/classifier_dataset_hard"
 
-PROPOSAL_CFG = ProposalConfig(
-    tumor_score_thresh=0.05,
-    pancreas_margin=35,
-    min_pancreas_overlap=0.05,
-    min_box_area=75,
-    max_box_area=18000,
-    top_k_candidates=5,
-    crop_margin=8,
+# Mining volontairement plus large que le runtime. Le ResNet doit apprendre a
+# rejeter les faux candidats que DINO propose a bas seuil, sinon il devient un
+# mauvais garde-fou anti-FP.
+MINING_CFG = ProposalConfig(
+    tumor_score_thresh=0.01,
+    pancreas_margin=45,
+    min_pancreas_overlap=0.00,
+    min_box_area=50,
+    max_box_area=26000,
+    top_k_candidates=12,
+    nms_iou=0.65,
+    crop_margin=10,
 )
 
-TARGET_NEGATIVE_RATIO = 3
-GT_POSITIVE_JITTERS = 3
+TARGET_NEGATIVE_RATIO = 4
+MIN_NEGATIVE_RATIO = 2
+GT_POSITIVE_JITTERS = 2
 POSITIVE_OVERLAP_RATIO = 0.25
 MIN_POSITIVE_PIXELS = 25
+LOW_OVERLAP_NEGATIVE_RATIO = 0.02
+LOW_OVERLAP_NEGATIVE_PIXELS = 10
 
 
 # ==========================================
@@ -87,14 +94,14 @@ def jitter_box(box, width, height, max_shift=0.12, max_scale=0.18):
     return clip_box([cx - bw / 2.0, cy - bh / 2.0, cx + bw / 2.0, cy + bh / 2.0], width, height)
 
 
-def save_patch(img_3c, box, out_folder, split_name, img_path, patch_count, margin=None):
-    margin = PROPOSAL_CFG.crop_margin if margin is None else margin
+def save_patch(img_3c, box, out_folder, split_name, img_path, patch_count, margin=None, tag="patch"):
+    margin = MINING_CFG.crop_margin if margin is None else margin
     crop = crop_from_box(img_3c, box, margin=margin)
     if crop is None:
         return patch_count
 
     stem = Path(img_path).stem
-    save_path = os.path.join(out_folder, f"{split_name}_{stem}_{patch_count:06d}.png")
+    save_path = os.path.join(out_folder, f"{split_name}_{tag}_{stem}_{patch_count:06d}.png")
     Image.fromarray(crop).save(save_path)
     return patch_count + 1
 
@@ -132,7 +139,7 @@ def extract_hard_patches(split_name):
         # evite de dependre uniquement des boites positives trouvees par DINO.
         gt_box = tumor_bbox(true_tumor)
         if gt_box is not None:
-            boxes = [expand_box(gt_box, PROPOSAL_CFG.crop_margin, W, H)]
+            boxes = [expand_box(gt_box, MINING_CFG.crop_margin, W, H)]
             boxes.extend(jitter_box(gt_box, W, H) for _ in range(GT_POSITIVE_JITTERS))
             for box in boxes:
                 patch_count = save_patch(
@@ -142,7 +149,8 @@ def extract_hard_patches(split_name):
                     split_name,
                     img_path,
                     patch_count,
-                    margin=PROPOSAL_CFG.crop_margin,
+                    margin=MINING_CFG.crop_margin,
+                    tag="gtpos",
                 )
                 gt_positive_count += 1
 
@@ -154,18 +162,26 @@ def extract_hard_patches(split_name):
                 pred.bboxes.cpu().numpy(),
                 pred.labels.cpu().numpy(),
                 image_shape=(H, W),
-                config=PROPOSAL_CFG,
+                config=MINING_CFG,
             )
 
         for cand in candidates:
             overlap_pixels, overlap_ratio = box_tumor_overlap(cand["box"], true_tumor)
 
-            if overlap_ratio >= POSITIVE_OVERLAP_RATIO and overlap_pixels >= MIN_POSITIVE_PIXELS:
+            is_positive = overlap_ratio >= POSITIVE_OVERLAP_RATIO and overlap_pixels >= MIN_POSITIVE_PIXELS
+            is_safe_negative = overlap_pixels == 0 or (
+                overlap_ratio <= LOW_OVERLAP_NEGATIVE_RATIO
+                and overlap_pixels <= LOW_OVERLAP_NEGATIVE_PIXELS
+            )
+
+            if is_positive:
                 out_folder = out_dir_1
                 dino_positive_count += 1
-            elif overlap_pixels == 0:
+                tag = "dinopos"
+            elif is_safe_negative:
                 out_folder = out_dir_0
                 hard_negative_count += 1
+                tag = "hardneg"
             else:
                 continue
 
@@ -176,7 +192,8 @@ def extract_hard_patches(split_name):
                 split_name,
                 img_path,
                 patch_count,
-                margin=PROPOSAL_CFG.crop_margin,
+                margin=MINING_CFG.crop_margin,
+                tag=tag,
             )
 
     print(f"\nEquilibrage des classes pour {split_name}...")
@@ -200,6 +217,26 @@ def extract_hard_patches(split_name):
         print(f"-> Supprime {len(files_to_delete)} fichiers de la classe 0.")
     else:
         print("-> Pas de suppression necessaire.")
+
+    files_0 = glob.glob(os.path.join(out_dir_0, "*.png"))
+    files_1 = glob.glob(os.path.join(out_dir_1, "*.png"))
+    min_count_0 = len(files_1) * MIN_NEGATIVE_RATIO
+    if len(files_0) < min_count_0 and len(files_0) > 0:
+        max_count_1 = max(1, len(files_0) // MIN_NEGATIVE_RATIO)
+        if len(files_1) > max_count_1:
+            dino_pos = [p for p in files_1 if f"{split_name}_dinopos_" in Path(p).name]
+            gt_pos = [p for p in files_1 if f"{split_name}_gtpos_" in Path(p).name]
+            random.shuffle(dino_pos)
+            random.shuffle(gt_pos)
+            keep = set((gt_pos + dino_pos)[:max_count_1])
+            files_to_delete = [p for p in files_1 if p not in keep]
+            for f_path in files_to_delete:
+                os.remove(f_path)
+            print(
+                "-> Supprime "
+                f"{len(files_to_delete)} positifs pour garder au moins "
+                f"{MIN_NEGATIVE_RATIO}:1 negatifs/positif."
+            )
 
     final_0 = len(glob.glob(os.path.join(out_dir_0, "*.png")))
     final_1 = len(glob.glob(os.path.join(out_dir_1, "*.png")))
