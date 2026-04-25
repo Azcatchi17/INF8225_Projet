@@ -46,20 +46,17 @@ TAMIA_VENV="$HOME/envs/msd_recall"
 # =============================================================================
 # 4. Sources des assets (Google Drive partage par Morad)
 # =============================================================================
-# Folder Drive `Projet_tamia` (a plat, pour eviter le rate-limit Drive sur les
-# milliers de PNG individuels — les gros dossiers sont zippes) :
-#   MSD_pancreas.zip                              (dataset, ~2 Go zippe)
-#   best_coco_bbox_mAP_epoch_25.pth               (checkpoint DINO v3)
-#   tumor_config_v3.py                            (config DINO)
-#   medsam_vit_b.pth                              (checkpoint MedSAM)
-#
-# stage_assets.sh decompresse les zips automatiquement et dispatche par nom.
-GDRIVE_FOLDER_URL="https://drive.google.com/drive/u/0/folders/1BgOn3074_GUrFu2qw5sGnXV0zCxaII73"
+# Mode fichier-par-fichier (gdown 6.x a un bug de confirmation antivirus pour
+# les fichiers > 100 Mo a l interieur d un folder ; en download individuel ca
+# marche). Folder URL desactive.
+GDRIVE_FOLDER_URL=""
 
-# Sources individuelles vides = on se repose entierement sur GDRIVE_FOLDER_URL.
-MSD_SOURCE=""
-DINO_CKPT_SOURCE=""
-MEDSAM_CKPT_SOURCE=""
+# 4 fichiers individuels du Drive Projet_tamia. Le format gdrive:<id> est
+# supporte directement par stage_assets.sh.
+MSD_SOURCE="gdrive:1n6tYRVDrF7w9kRIqLbTUFNuSr3JMDAef"           # MSD_pancreas.zip
+DINO_CKPT_SOURCE="gdrive:1GFAeJzdyGuOCRQwdLJv1N90AsQYT2u9R"     # best_coco_bbox_mAP_epoch_25.pth
+DINO_CFG_SOURCE="gdrive:1D3hGIJM0JJ9g93CjtOEe6D-ikn1f3kx4"      # tumor_config_v3.py
+MEDSAM_CKPT_SOURCE="gdrive:1-K3CIzq1kavz5jkCiQTDhlxBISHPpPAN"   # medsam_vit_b.pth
 
 # =============================================================================
 # 5. Temps alloue par job (prevu large, ajuste si attente en queue trop longue)

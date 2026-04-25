@@ -245,29 +245,76 @@ if [[ -n "${GDRIVE_FOLDER_URL:-}" ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-# 2. Voie (b) : sources individuelles (overrides / complements)
+# 2. Voie (b) : sources individuelles (downloads fichier par fichier)
 # -----------------------------------------------------------------------------
-stage_one "msd_dataset"  "$MSD_SOURCE"        "$DEST_MSD/"
+# Recommande pour TamIA : gdown traite chaque source individuellement, ce qui
+# evite le bug de confirmation antivirus pour les fichiers > 100 Mo qui
+# survient en mode folder-traversal (gdown 6.x).
 
-if [[ -n "$DINO_CKPT_SOURCE" ]]; then
-    # Si c est un dossier ou un folder Drive, on copie tout; sinon fichier.
-    if [[ "$DINO_CKPT_SOURCE" == */ || -d "$DINO_CKPT_SOURCE" ]]; then
-        stage_one "dino_v3_dir"  "$DINO_CKPT_SOURCE" "$DEST_DINO_DIR/"
+fetch_to_file() {
+    # Telecharge UNE source vers UN fichier de destination (creuse le dirname).
+    local source="$1"
+    local destination="$2"
+    if [[ -z "$source" ]]; then
+        return 0
+    fi
+    mkdir -p "$(dirname "$destination")"
+    if [[ "$source" == gdrive:* || "$source" == http*://drive.google.com/* ]]; then
+        download_gdrive_file "$source" "$destination"
+    elif [[ "$source" == http*://* ]]; then
+        echo "[stage] wget $source -> $destination"
+        wget -q --show-progress -O "$destination" "$source"
+    elif [[ "$source" == s3://* ]]; then
+        echo "[stage] aws s3 cp $source -> $destination"
+        aws s3 cp "$source" "$destination"
+    elif [[ -f "$source" ]]; then
+        echo "[stage] cp $source -> $destination"
+        cp -n "$source" "$destination"
     else
-        stage_one "dino_v3_ckpt" "$DINO_CKPT_SOURCE" \
-                  "$DEST_DINO_DIR/best_coco_bbox_mAP_epoch_25.pth"
+        echo "[stage] fetch_to_file: source non supportee: $source" >&2
+        return 1
     fi
+}
+
+# --- MSD_pancreas : zip a telecharger puis dezipper -------------------------
+if [[ -n "$MSD_SOURCE" ]]; then
+    msd_zip="$TAMIA_ASSETS/_msd_pancreas.zip"
+    msd_extract="$TAMIA_ASSETS/_msd_extract"
+
+    echo "[stage] MSD_pancreas: download zip"
+    fetch_to_file "$MSD_SOURCE" "$msd_zip"
+
+    echo "[stage] MSD_pancreas: unzip -> $msd_extract"
+    rm -rf "$msd_extract"
+    mkdir -p "$msd_extract"
+    unzip -q -o "$msd_zip" -d "$msd_extract"
+
+    # Le zip peut contenir au choix : MSD_pancreas/, data/MSD_pancreas/, ...
+    src="$(find "$msd_extract" -type d -name "MSD_pancreas" -print -quit || true)"
+    if [[ -z "$src" ]]; then
+        echo "[stage] ERREUR: MSD_pancreas/ introuvable dans le zip extrait" >&2
+        ls -la "$msd_extract"
+        exit 2
+    fi
+    rm -rf "$DEST_MSD"
+    mv "$src" "$DEST_MSD"
+    rm -rf "$msd_extract" "$msd_zip"
+    echo "[stage] MSD_pancreas: ready at $DEST_MSD"
 fi
 
-# tumor_config_v3.py : fallback depuis le repo si absent apres dispatch.
-if [[ ! -f "$DEST_DINO_DIR/tumor_config_v3.py" ]]; then
-    if [[ -f "$TAMIA_REPO/tumor_config_v3.py" ]]; then
-        cp "$TAMIA_REPO/tumor_config_v3.py" "$DEST_DINO_DIR/tumor_config_v3.py"
-        echo "[stage] tumor_config_v3.py copie depuis le repo"
-    fi
+# --- DINO checkpoint --------------------------------------------------------
+fetch_to_file "$DINO_CKPT_SOURCE" "$DEST_DINO_DIR/best_coco_bbox_mAP_epoch_25.pth"
+
+# --- DINO config (tumor_config_v3.py) ---------------------------------------
+fetch_to_file "${DINO_CFG_SOURCE:-}" "$DEST_DINO_DIR/tumor_config_v3.py"
+# Fallback : si DINO_CFG_SOURCE vide et que le repo a deja le fichier, copie.
+if [[ ! -f "$DEST_DINO_DIR/tumor_config_v3.py" && -f "$TAMIA_REPO/tumor_config_v3.py" ]]; then
+    cp "$TAMIA_REPO/tumor_config_v3.py" "$DEST_DINO_DIR/tumor_config_v3.py"
+    echo "[stage] tumor_config_v3.py copie depuis le repo (fallback)"
 fi
 
-stage_one "medsam_ckpt" "$MEDSAM_CKPT_SOURCE" "$DEST_MEDSAM_CKPT"
+# --- MedSAM checkpoint ------------------------------------------------------
+fetch_to_file "$MEDSAM_CKPT_SOURCE" "$DEST_MEDSAM_CKPT"
 
 # -----------------------------------------------------------------------------
 # 3. Resume + verifications finales
