@@ -6,7 +6,9 @@ top-1 decision that turns many recoverable cases into false negatives.
 """
 from __future__ import annotations
 
+import os
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Iterable
 
 import numpy as np
@@ -28,6 +30,29 @@ class ProposalConfig:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+def get_resnet_checkpoint_dir() -> Path:
+    """Return the persistent directory used for ResNet ensemble artifacts."""
+    env_path = os.environ.get("RESNET_CHECKPOINT_DIR") or os.environ.get("INF8225_DRIVE_ROOT")
+    if env_path:
+        return Path(env_path)
+
+    data_path = Path("data")
+    if data_path.is_symlink():
+        resolved = data_path.resolve()
+        if resolved.name == "data":
+            return resolved.parent
+
+    for candidate in (
+        Path("/content/drive/MyDrive/Projet_Medsam"),
+        Path("/content/drive/MyDrive/INF8225_Projet"),
+        Path("/content/drive/MyDrive/INF8225"),
+    ):
+        if candidate.exists():
+            return candidate
+
+    return Path(".")
 
 
 def ensure_3c(img_np: np.ndarray) -> np.ndarray:

@@ -395,6 +395,9 @@ def setup(
         _install_deps(reinstall=reinstall)
 
     drive_root = _find_drive_folder(drive_folder)
+    os.environ["INF8225_DRIVE_ROOT"] = str(drive_root)
+    os.environ.setdefault("RESNET_CHECKPOINT_DIR", str(drive_root))
+    os.environ.setdefault("MSD_RESNET_DIR", str(drive_root))
     _make_output_dirs(drive_root)
     for local_rel, drive_rel in SYMLINK_MAP.items():
         _link(project_root / local_rel, drive_root / drive_rel)

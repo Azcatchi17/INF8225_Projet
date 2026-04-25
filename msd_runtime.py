@@ -18,7 +18,10 @@ CLASSIFIER_DATASET_DIR = _path_from_env(
     PROJECT_ROOT / "data" / "classifier_dataset_hard",
 )
 RESULTS_DIR = _path_from_env("MSD_RESULTS_DIR", PROJECT_ROOT / "data" / "results")
-RESNET_DIR = _path_from_env("MSD_RESNET_DIR", PROJECT_ROOT)
+RESNET_DIR = _path_from_env(
+    "MSD_RESNET_DIR",
+    os.environ.get("RESNET_CHECKPOINT_DIR", os.environ.get("INF8225_DRIVE_ROOT", PROJECT_ROOT)),
+)
 
 DINO_CONFIG_PATH = _path_from_env(
     "DINO_CONFIG_PATH",

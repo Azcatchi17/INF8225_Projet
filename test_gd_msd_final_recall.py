@@ -21,6 +21,7 @@ from msd_recall_strategy import (
     ProposalConfig,
     ensure_3c,
     extract_dino_candidates,
+    get_resnet_checkpoint_dir,
     image_score,
     score_candidates_with_resnet,
     select_positive_candidates,
@@ -68,10 +69,12 @@ dino_model = init_detector(
 )
 
 ensemble_models = []
+checkpoint_dir = get_resnet_checkpoint_dir()
+print(f"Chargement des checkpoints ResNet depuis : {checkpoint_dir.resolve()}")
 for i in range(1, 6):
     model = models.resnet18(weights=None)
     model.fc = nn.Sequential(nn.Dropout(0.5), nn.Linear(model.fc.in_features, 2))
-    model.load_state_dict(torch.load(f"resnet_fold_{i}.pth", map_location=device))
+    model.load_state_dict(torch.load(checkpoint_dir / f"resnet_fold_{i}.pth", map_location=device))
     model = model.to(device).eval()
     ensemble_models.append(model)
 

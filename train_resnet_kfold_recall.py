@@ -9,8 +9,14 @@ import os
 import numpy as np
 from sklearn.metrics import precision_recall_curve # NOUVEL IMPORT
 
+from msd_recall_strategy import get_resnet_checkpoint_dir
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Entrainement Multi-Seed Ensemble (Optimisé Recall) sur : {device}")
+
+checkpoint_dir = get_resnet_checkpoint_dir()
+checkpoint_dir.mkdir(parents=True, exist_ok=True)
+print(f"Checkpoints ResNet sauvegardes dans : {checkpoint_dir.resolve()}")
 
 # 1. Transformations
 train_transforms = transforms.Compose([
@@ -136,9 +142,9 @@ for run in range(1, NUM_RUNS + 1):
                 best_prec_at_best_recall = epoch_prec
                 best_thresh = epoch_thresh
                 
-                torch.save(model.state_dict(), f"resnet_fold_{run}.pth")
+                torch.save(model.state_dict(), checkpoint_dir / f"resnet_fold_{run}.pth")
                 
-                with open(f"threshold_run_{run}.txt", "w") as f:
+                with open(checkpoint_dir / f"threshold_run_{run}.txt", "w") as f:
                     f.write(str(best_thresh))
                     
                 if is_tie_breaker:
