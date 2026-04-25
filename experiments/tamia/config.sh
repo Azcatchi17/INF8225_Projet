@@ -46,15 +46,15 @@ TAMIA_VENV="$HOME/envs/msd_recall"
 # =============================================================================
 # 4. Sources des assets (Google Drive partage par Morad)
 # =============================================================================
-# Folder Drive qui contient :
-#   data/MSD_pancreas/
-#   data/classifier_dataset_hard/         (optionnel, gain ~1h30 sur etape 01)
-#   work_dir/MedSAM/medsam_vit_b.pth
-#   work_dirs/tumor_config_v3/best_coco_bbox_mAP_epoch_25.pth
-#   work_dirs/tumor_config_v3/tumor_config_v3.py
+# Folder Drive `Projet_tamia` (a plat, pour eviter le rate-limit Drive sur les
+# milliers de PNG individuels — les gros dossiers sont zippes) :
+#   MSD_pancreas.zip                              (dataset, ~2 Go zippe)
+#   best_coco_bbox_mAP_epoch_25.pth               (checkpoint DINO v3)
+#   tumor_config_v3.py                            (config DINO)
+#   medsam_vit_b.pth                              (checkpoint MedSAM)
 #
-# stage_assets.sh cherche ces fichiers par nom a n importe quelle profondeur.
-GDRIVE_FOLDER_URL="https://drive.google.com/drive/folders/1Y__wKNXPZ9UpaXqCWM9VnN8GkvajomxE"
+# stage_assets.sh decompresse les zips automatiquement et dispatche par nom.
+GDRIVE_FOLDER_URL="https://drive.google.com/drive/u/0/folders/1BgOn3074_GUrFu2qw5sGnXV0zCxaII73"
 
 # Sources individuelles vides = on se repose entierement sur GDRIVE_FOLDER_URL.
 MSD_SOURCE=""
