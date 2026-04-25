@@ -41,7 +41,7 @@ base_dir = "data/MSD_pancreas"
 output_base_dir = "data/classifier_dataset_hard"
 
 PROPOSAL_CFG = ProposalConfig(
-    tumor_score_thresh=0.01,
+    tumor_score_thresh=0.05,
     pancreas_margin=35,
     min_pancreas_overlap=0.05,
     min_box_area=75,

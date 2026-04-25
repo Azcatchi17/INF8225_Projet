@@ -30,7 +30,7 @@ register_all_modules()
 
 # Strategie recall: DINO propose plus large, ResNet decide ensuite.
 PROPOSAL_CFG = ProposalConfig(
-    tumor_score_thresh=0.01,
+    tumor_score_thresh=0.05,
     pancreas_margin=35,
     min_pancreas_overlap=0.05,
     min_box_area=75,

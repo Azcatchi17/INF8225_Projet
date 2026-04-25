@@ -4,7 +4,7 @@ Objectif : reduire les faux negatifs sans laisser repartir les faux positifs.
 
 Le changement principal est de remplacer la decision fragile `top-1 DINO -> ResNet -> MedSAM` par :
 
-1. DINO genere jusqu'a 5 candidats tumeur a bas seuil (`0.01`).
+1. DINO genere jusqu'a 5 candidats tumeur a seuil recall (`0.05`).
 2. Le filtre pancreas est relache mais conserve (`marge 35 px`, overlap minimal `0.05`).
 3. ResNet score chaque candidat, puis la decision image-level utilise le meilleur score candidat.
 4. MedSAM segmente jusqu'a 2 candidats valides au lieu d'un seul.

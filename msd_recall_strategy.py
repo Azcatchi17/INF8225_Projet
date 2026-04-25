@@ -16,7 +16,7 @@ from PIL import Image
 @dataclass
 class ProposalConfig:
     pancreas_score_thresh: float = 0.30
-    tumor_score_thresh: float = 0.01
+    tumor_score_thresh: float = 0.05
     pancreas_margin: int = 35
     min_pancreas_overlap: float = 0.05
     min_box_area: int = 75
