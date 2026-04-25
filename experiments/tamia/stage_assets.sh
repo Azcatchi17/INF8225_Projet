@@ -229,17 +229,16 @@ if [[ -n "${GDRIVE_FOLDER_URL:-}" ]]; then
         mv "$medsam_ckpt" "$DEST_MEDSAM_CKPT"
     fi
 
-    # --- dispatch (optionnel) : crops hard-negative deja extraits --------------
-    # Si le folder Drive contient classifier_dataset_hard/ (zippe ou non), on
-    # le pose dans le cwd des jobs. Ca permet de skip l etape 01 :
-    #   bash experiments/tamia/submit_all.sh --from 02
-    hard_dir="$(find "$STAGING" -type d -name "classifier_dataset_hard" -print -quit || true)"
-    if [[ -n "$hard_dir" && -d "$hard_dir" ]]; then
-        DEST_HARD="$TAMIA_REPO/data/classifier_dataset_hard"
-        echo "[stage] dispatch: classifier_dataset_hard $hard_dir -> $DEST_HARD"
-        mkdir -p "$(dirname "$DEST_HARD")"
-        rm -rf "$DEST_HARD"
-        mv "$hard_dir" "$DEST_HARD"
+    # classifier_dataset_hard : deliberement NON dispatche. Les crops du Drive
+    # ont ete extraits sous l ancienne strategie (top-1, seuil DINO eleve). La
+    # strategie recall actuelle change les bbox envoyees au ResNet (seuil 0.01,
+    # top-5, pancreas_margin 35) -> il faut imperativement les re-generer via
+    # l etape 01 (extract_hard_negatives.py) pour ne pas entrainer le ResNet
+    # sur la mauvaise distribution. On ignore donc l eventuel dossier Drive.
+    stale_hard="$(find "$STAGING" -type d -name "classifier_dataset_hard" -print -quit || true)"
+    if [[ -n "$stale_hard" && -d "$stale_hard" ]]; then
+        echo "[stage] classifier_dataset_hard trouve sur Drive -> IGNORE"
+        echo "        (strategie recall : crops a regenerer via etape 01)"
     fi
 
     rm -rf "$STAGING"
