@@ -1,0 +1,485 @@
+%%%% rapport.tex --- INF8225 Projet 2026
+\typeout{INF8225 Projet -- Pipelines hybrides pour la segmentation de tumeurs pancreatiques}
+
+\documentclass{article}
+\pdfpagewidth=8.5in
+\pdfpageheight=11in
+\usepackage{ijcai19}
+
+\usepackage{times}
+\usepackage{soul}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage[small]{caption}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\urlstyle{same}
+
+\title{De la d\'etection de polypes \`a la segmentation de tumeurs pancr\'eatiques :\\
+limites des d\'etecteurs \emph{open-vocabulary} et r\^ole d'un classifieur appris en aval}
+
+\author{
+Morad Bel-Melih$^{1}$\footnote{Auteur de contact}\and
+Paul B.$^{1}$\\
+\affiliations
+$^{1}$Polytechnique Montr\'eal, Cours INF8225 -- Projet 2026\\
+\emails
+morad.bel-melih@polymtl.ca,
+paul.b@polymtl.ca
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Nous \'etudions une cha\^ine de segmentation faiblement supervis\'ee qui combine
+un d\'etecteur \emph{open-vocabulary} (\emph{Grounding DINO}) et un segmenteur
+\emph{promptable} (\emph{MedSAM}). Cette cha\^ine atteint un DICE de 0{,}95
+sur \emph{Kvasir-SEG} en mode oracle, ce qui valide le principe d'une
+segmentation pilot\'ee par bo\^ites textuelles. Lorsque nous appliquons la
+m\^eme architecture aux tumeurs pancr\'eatiques du \emph{Medical Segmentation
+Decathlon}, la sp\'ecificit\'e s'effondre \`a 0{,}17 \`a cause des hallucinations
+massives du d\'etecteur sur les coupes saines. Nous documentons ensuite quatre
+strat\'egies successives pour restaurer cette sp\'ecificit\'e, motiv\'ees par
+nos observations exp\'erimentales : un agent multimodal de v\'erification
+(\emph{Gemini}), une porte anatomique fond\'ee sur un U-Net du pancr\'eas,
+une cascade spatiale pancr\'eas$\rightarrow$tumeur, et enfin un classifieur
+ResNet-18 d'ensemble entra\^in\'e sur les n\'egatifs durs produits par
+\emph{Grounding DINO}. Cette derni\`ere strat\'egie porte la sp\'ecificit\'e
+\`a 0{,}74 sans effondrer la sensibilit\'e, et illustre que le signal de
+texture local capt\'e par un classifieur appris est compl\'ementaire au signal
+\emph{open-vocabulary} du d\'etecteur.
+\end{abstract}
+
+\section{Introduction}
+
+L'apprentissage profond a profond\'ement modifi\'e la segmentation d'images
+m\'edicales. Les architectures sp\'ecialis\'ees comme \emph{U-Net}~\cite{ronneberger2015unet}
+puis \emph{nnU-Net}~\cite{isensee2021nnunet} dominent les
+\emph{benchmarks} lorsqu'un volume suffisant de masques pixel pr\'ecis est
+disponible. Cette exigence reste un frein op\'erationnel, et plusieurs travaux
+r\'ecents proposent de la contourner en composant deux mod\`eles de fondation.
+\emph{Segment~Anything}~\cite{kirillov2023sam} et son adaptation m\'edicale
+\emph{MedSAM}~\cite{ma2024medsam} produisent un masque \`a partir d'un
+\emph{prompt} g\'eom\'etrique, tandis que les d\'etecteurs
+\emph{open-vocabulary} comme \emph{Grounding~DINO}~\cite{liu2024groundingdino}
+g\'en\`erent ce \emph{prompt} \`a partir d'une simple cha\^ine de caract\`eres.
+La promesse est s\'eduisante~: aucune annotation pixel n'est requise au moment
+de l'inf\'erence, seulement le nom de la classe d'int\'er\^et.
+
+Notre projet \'eprouve cette cha\^ine sur deux probl\`emes de difficult\'e
+contrast\'ee. Nous v\'erifions d'abord son comportement sur \emph{Kvasir-SEG},
+un \emph{benchmark} de polypes coliques o\`u les objets pr\'esentent un fort
+contraste visuel et des contours nets. Nous l'appliquons ensuite aux tumeurs
+pancr\'eatiques 2D extraites du \emph{Medical Segmentation
+Decathlon}~\cite{antonelli2022msd}, un cas notoirement difficile o\`u la
+tumeur partage la texture du parenchyme environnant. Le passage du premier au
+second domaine fait appara\^itre un mode d'\'echec sp\'ecifique, l'hallucination
+massive de \emph{DINO} sur les coupes saines, qui m\`ene \`a une sp\'ecificit\'e
+proche du hasard. La majeure partie de notre d\'emarche consiste alors \`a
+identifier la source de ce mode d'\'echec et \`a tester quatre m\'ecanismes de
+correction de complexit\'e croissante. Le pipeline final, qui ajoute un
+classifieur ResNet-18 d'ensemble~\cite{he2016resnet} en garde-fou de second
+\'etage, restaure une sp\'ecificit\'e exploitable. Le code et les donn\'ees
+pr\'epar\'ees sont publi\'es \`a~\url{https://github.com/moradBMH/INF8225_Projet}.
+
+\section{Travaux Ant\'erieurs}
+
+La segmentation pancr\'eatique sp\'ecialis\'ee a \'et\'e \'etudi\'ee
+intensivement~; Zhou \emph{et~al.}~\shortcite{zhou2017fixedpoint} introduisent
+un \emph{fixed-point model} qui raffine it\'erativement la pr\'ediction de
+l'organe, et Zhu \emph{et~al.}~\shortcite{zhu2019multi} ajoutent une cascade
+multi-\'echelle pour le d\'epistage des ad\'enocarcinomes ductaux. Ces approches
+exigent toutefois un volume cons\'equent de masques pixel-pr\'ecis 3D,
+contrainte que \emph{nnU-Net}~\cite{isensee2021nnunet} a optimis\'ee mais sans
+la lever.
+
+L'arriv\'ee de \emph{SAM}~\cite{kirillov2023sam} a chang\'e la donne en
+proposant un segmenteur g\'en\'eraliste pilot\'e par un \emph{prompt}
+g\'eom\'etrique. \emph{MedSAM}~\cite{ma2024medsam} sp\'ecialise ce mod\`ele sur
+1{,}5~M de paires image/masque m\'edicales et obtient des performances
+comp\'etitives sur de nombreuses modalit\'es. La question reste de savoir
+comment fournir cette bo\^ite automatiquement, et \emph{Grounding
+DINO}~\cite{liu2024groundingdino} y r\'epond en alignant un encodeur visuel
+DINO~\cite{caron2021dino} avec un encodeur textuel BERT~\cite{devlin2019bert}.
+Plusieurs publications r\'ecentes assemblent ces deux composants pour des
+\emph{benchmarks} m\'edicaux, mais peu \'evaluent honn\^etement leur
+sp\'ecificit\'e sur des images sans la classe cible.
+
+L'utilisation d'agents multimodaux pour raffiner les pr\'edictions visuelles
+constitue une famille \'emergente de techniques inspir\'ees du \emph{Chain-of-Thought}
+\cite{wei2022chainofthought}. Plusieurs travaux interrogent un LLM
+multimodal comme \emph{Gemini}~\cite{team2024gemini} \`a propos d'une r\'egion
+candidate. Notre tentative dans ce sens, document\'ee en section~\ref{sec:agent},
+\'eclaire les limites pratiques de cette approche dans un contexte radiologique.
+
+\section{Approche Th\'eorique}
+
+\subsection{Principe d'une segmentation \emph{prompt\'ee}}
+
+\emph{MedSAM} utilise l'architecture \emph{ViT-B} de \emph{SAM} et produit un
+masque $\hat{\boldsymbol{M}}$ en moins de 50~ms par image, conditionnellement
+\`a une bo\^ite $\boldsymbol{b}\in\mathbb{R}^4$ fournie en entr\'ee. La
+qualit\'e du masque d\'epend essentiellement de la qualit\'e de la bo\^ite~;
+toute erreur en amont se r\'epercute directement en aval, ce qui fait du
+d\'etecteur le point critique du pipeline.
+
+\emph{Grounding DINO} aligne un encodeur Swin-T avec un encodeur BERT par
+\emph{cross-attention} bidirectionnelle. Pour une requ\^ete textuelle
+$\boldsymbol{q}$ et une position spatiale $\boldsymbol{p}$, il pr\'edit un
+score $s(\boldsymbol{p},\boldsymbol{q})\in[0,1]$ et une bo\^ite candidate.
+La perte de classification est une \emph{focal loss}~\cite{lin2017focal} avec
+$\gamma=2{,}0$ et $\alpha=0{,}25$, qui att\'enue le poids des nombreux ancres
+faciles. La proc\'edure d'\'echantillonnage \emph{RandomSamplingNegPos}
+introduit des cha\^ines \emph{distractor} pendant l'entra\^inement, ce qui
+permet en principe au mod\`ele d'apprendre \`a ne rien activer en l'absence
+de la classe cible.
+
+\subsection{Apprentissage d'un \emph{prior} anatomique}
+
+Pour fournir une r\'egion d'int\'er\^et anatomique, nous entra\^inons un
+\emph{U-Net}~\cite{ronneberger2015unet} \`a quatre niveaux ($\sim$1{,}9~M
+param\`etres) sur le label \texttt{1} (pancr\'eas) du MSD. Comme cette
+porte doit avoir une sensibilit\'e \'elev\'ee pour ne pas masquer une vraie
+tumeur, nous adoptons une perte de Tversky~\cite{salehi2017tversky} qui
+p\'enalise davantage les faux n\'egatifs que les faux positifs,
+\begin{equation}
+\mathcal{L}_{\text{Tv}}=1-\frac{TP}{TP+\alpha\,FP+\beta\,FN},
+\end{equation}
+avec $\alpha=0{,}3$ et $\beta=0{,}7$. Le masque pr\'edit est dilat\'e de 35~px
+pour absorber les erreurs de contour.
+
+\subsection{Classifieur appris en second \'etage}
+
+Lorsque les filtres spatiaux et s\'emantiques se r\'ev\`elent insuffisants
+(section~\ref{sec:exp}), nous ajoutons un classifieur appris qui juge
+chaque candidat localement. Concr\`etement, un \emph{crop} 224$\times$224
+autour de chaque bo\^ite est pass\'e \`a cinq ResNet-18~\cite{he2016resnet}
+initialis\'es avec des graines diff\'erentes. Le score \emph{image-level}
+agr\`ege les probabilit\'es individuelles avec une p\'enalit\'e sur la
+variance,
+\begin{equation}
+\hat{p}_{\text{ens}}=\overline{\hat{p}}-0{,}25\,\sigma(\hat{p}),
+\end{equation}
+ce qui filtre les candidats sur lesquels les mod\`eles sont en d\'esaccord.
+
+\section{Donn\'ees et Protocole}
+
+\emph{Kvasir-SEG} contient 1000 images d'endoscopie color\'ee accompagn\'ees
+de masques de polypes et de bo\^ites \emph{ground-truth}. Nous l'utilisons
+comme banc d'essai initial pour la cha\^ine \emph{detection$+$segmentation},
+avec un \emph{split} 880/20/100 \`a la mani\`ere des publications standard.
+
+\emph{MSD~Pancreas} contient 281 volumes 3D de scanners CT. Nous extrayons
+des coupes axiales 2D et obtenons 800 images d'entra\^inement (400 contenant
+une tumeur, 400 sans), 100 de validation et 100 de test, chacune \'equilibr\'ee
+50/50 entre coupes positives et n\'egatives. Les masques sont multiclasse,
+avec \texttt{0} pour le fond, \texttt{1} pour le pancr\'eas et \texttt{2} pour
+la tumeur. Toutes les m\'etriques de segmentation sont calcul\'ees sur la
+classe tumeur, et les m\'etriques de classification (sensibilit\'e,
+sp\'ecificit\'e, F1) sur l'image enti\`ere.
+
+\section{Exp\'eriences}\label{sec:exp}
+
+Nous avons men\'e nos exp\'eriences en suivant une logique de complexit\'e
+croissante~: chaque it\'eration r\'epond \`a une faiblesse mesur\'ee \`a
+l'\'etape pr\'ec\'edente. Cette section retrace cette progression.
+
+\subsection{Validation initiale sur Kvasir-SEG}
+
+Avant d'aborder le probl\`eme pancr\'eatique, nous v\'erifions que la cha\^ine
+\emph{detection$+$MedSAM} fonctionne sur un cas favorable. Sur \emph{Kvasir-SEG},
+les polypes pr\'esentent un fort contraste avec la muqueuse environnante et
+des contours bien d\'efinis. Nous \'evaluons d'abord MedSAM en mode oracle, en
+lui fournissant directement les bo\^ites \emph{ground-truth} fournies avec
+le dataset. La sortie atteint un DICE moyen de \textbf{0{,}954} sur les 1000
+images, ce qui confirme que MedSAM est un segmenteur fiable lorsque la
+bo\^ite est correcte. Le \emph{fine-tuning} de \emph{Grounding~DINO} sur la
+classe \texttt{polyp} (configuration \texttt{polyp\_config.py}) permet ensuite
+de fermer la boucle automatiquement, avec un mAP\(_{\text{COCO}}\) sup\'erieur
+\`a 0{,}55 sur la validation. Ces r\'esultats valident le principe et nous
+encouragent \`a porter la m\^eme architecture sur un probl\`eme plus
+ambitieux.
+
+\subsection{Premi\`ere application au pancr\'eas}
+
+Le passage \`a \emph{MSD~Pancreas} introduit deux difficult\'es. D'abord, la
+classe \texttt{tumor} n'appartient pas au vocabulaire pertinent du
+\emph{checkpoint} pr\'e-entra\^in\'e \texttt{swin-T objects365$+$goldg}~;
+appliqu\'e en \emph{zero-shot}, le mod\`ele produit des bo\^ites quasiment
+al\'eatoires (mAP $<$ 0{,}05). Nous adaptons donc \emph{Grounding~DINO}
+\`a deux classes (\texttt{pancreas}, \texttt{tumor}) en d\'egelant les quatre
+\emph{stages} du backbone, en abaissant le taux d'apprentissage \`a $10^{-5}$,
+en activant trois cha\^ines \emph{distractor} \'echantillonn\'ees, et en
+utilisant le \emph{prompt} compos\'e ``\texttt{pancreas . tumor .}''.
+L'entra\^inement converge en 25~\'epoques sur GPU~T4 et le meilleur
+\emph{checkpoint} atteint un mAP\(_{\text{COCO}}\) d'environ 0{,}30 sur la
+validation, ce qui constitue notre meilleur d\'etecteur.
+
+Une fois le d\'etecteur sp\'ecialis\'e, nous reprenons la cha\^ine canonique
+en conservant la bo\^ite tumeur de plus haut score et en l'envoyant \`a
+\emph{MedSAM}. Le tableau~\ref{tab:abl} reporte les m\'etriques sur le
+\emph{split} test. La sensibilit\'e est quasi-parfaite (0{,}98), mais la
+sp\'ecificit\'e tombe \`a 0{,}17 parce que \emph{DINO} produit
+syst\'ematiquement une bo\^ite m\^eme sur les coupes sans tumeur. Comme
+\emph{MedSAM} segmente toujours quelque chose dans cette bo\^ite, la
+sp\'ecificit\'e refl\`ete directement le comportement du d\'etecteur. Le
+DICE moyen sur les images positives reste mod\'er\'e (0{,}47), une partie
+des bo\^ites \'etant centr\'ee sur du parenchyme sain plut\^ot que sur la
+tumeur.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrr}
+\toprule
+M\'ethode & Sens. & Sp\'ec. & DICE & F1 \\
+\midrule
+Oracle MedSAM (bo\^ite GT)              & 1{,}00 & --     & 0{,}88 & --     \\
+DINO+MedSAM \emph{one-shot}             & 0{,}98 & 0{,}17 & 0{,}47 & 0{,}78 \\
+\,+\,agent Gemini                       & 0{,}96 & 0{,}21 & 0{,}46 & 0{,}77 \\
+\,+\,U-Net pancr\'eas (strict)          & 0{,}73 & 0{,}50 & 0{,}34 & 0{,}71 \\
+\,+\,U-Net pancr\'eas (rel\^ach\'e)     & 0{,}92 & 0{,}30 & 0{,}45 & 0{,}77 \\
+Cascade panc.$\rightarrow$tum.\ (V2)    & 0{,}94 & 0{,}40 & 0{,}50 & 0{,}80 \\
+\textbf{Recall ResNet ens.}             & \textbf{0{,}88} & \textbf{0{,}74} & \textbf{0{,}54} & \textbf{0{,}81} \\
+\bottomrule
+\end{tabular}
+\caption{Performances comparatives sur le \emph{split} test MSD
+(100~images, 50 positives / 50 n\'egatives). DICE calcul\'e sur les images
+positives uniquement.}
+\label{tab:abl}
+\end{table}
+
+Cette observation oriente la suite de notre travail. Le segmenteur n'est
+pas en cause, comme le montre la borne sup\'erieure obtenue en oracle (DICE
+0{,}88 lorsqu'on fournit \`a MedSAM la bo\^ite \emph{ground-truth} de la
+tumeur). Toute am\'elioration ult\'erieure doit donc s'attaquer \`a la
+g\'en\'eration de bo\^ites par \emph{Grounding~DINO} ou ajouter un m\'ecanisme
+de rejet en aval.
+
+\subsection{Tentative de raffinement par agent multimodal}\label{sec:agent}
+
+La premi\`ere id\'ee que nous explorons est de demander \`a un mod\`ele
+multimodal externe de v\'erifier ou de corriger les bo\^ites douteuses. Le
+notebook \texttt{agentic\_segmentation\_msd.ipynb} branche \emph{Gemini}~2.0
+\cite{team2024gemini} en aval de \emph{DINO}. \`A chaque \'etape l'agent
+re\c{c}oit le \emph{prompt} courant, la bo\^ite top-1, le masque \emph{MedSAM}
+et un \emph{crop} de la r\'egion, et peut renvoyer une action parmi
+\texttt{shrink}, \texttt{expand}, \texttt{shift}, \texttt{accept} et
+\texttt{reject}.
+
+Trois observations conduisent \`a abandonner cette piste. D'abord, l'agent
+accepte la majorit\'e des hallucinations parce que rien ne distingue, dans
+le \emph{crop} pr\'esent\'e, un faux positif d'un vrai. Ensuite, son
+comportement reste non d\'eterministe m\^eme \`a temp\'erature nulle, ce qui
+emp\^eche toute calibration fiable. Enfin, le co\^ut moyen d'environ 2~s par
+appel rend l'\'evaluation prohibitive sur 100~images. Le tableau~\ref{tab:abl}
+montre que ce m\'ecanisme n'apporte qu'un gain marginal de sp\'ecificit\'e
+(0{,}17 $\rightarrow$ 0{,}21). Nous concluons que la v\'erification doit
+provenir d'un mod\`ele plus sp\'ecialis\'e que d'un LLM g\'en\'eraliste, et
+nous orientons l'effort vers des informations anatomiques explicites.
+
+\subsection{Porte anatomique fond\'ee sur un U-Net du pancr\'eas}
+
+Puisque les hallucinations de \emph{DINO} sont distribu\'ees sur l'ensemble
+de l'image, une mani\`ere naturelle de les filtrer consiste \`a contraindre
+les bo\^ites \`a tomber sur le pancr\'eas. Nous entra\^inons un \emph{U-Net}
+sur le label \texttt{1} du MSD, conform\'ement \`a la section~3.2, puis nous
+rejetons toute bo\^ite dont l'\emph{overlap} avec le masque pancr\'eas
+dilat\'e est inf\'erieur \`a un seuil $\tau_{\text{ov}}$. Un seuil $\tau$ sur
+le score \emph{DINO} compl\`ete ce filtrage spatial.
+
+Une premi\`ere version stricte ($\tau_{\text{ov}}=0{,}10$, dilatation 15~px,
+masque clip\'e au ROI) am\'eliore la sp\'ecificit\'e \`a 0{,}50 mais sacrifie
+25 points de sensibilit\'e parce que le pancr\'eas pr\'edit ne couvre pas
+toujours la tumeur. Une seconde version rel\^ach\'ee ($\tau_{\text{ov}}=0{,}05$,
+dilatation 35~px, perte de Tversky pour le U-Net) restaure 0{,}92 de
+sensibilit\'e mais ne gagne que peu en sp\'ecificit\'e (0{,}30) parce que le
+ROI \'elargi laisse passer les hallucinations intra-pancr\'eatiques. La porte
+anatomique appara\^it donc utile mais incompl\`ete~: elle ne sait pas
+distinguer une vraie tumeur d'une fausse alarme situ\'ee sur l'organe.
+
+\subsection{Cascade pancr\'eas$\rightarrow$tumeur exploitant le d\'etecteur}
+
+L'observation pr\'ec\'edente sugg\`ere d'\'eviter le co\^ut d'un mod\`ele
+suppl\'ementaire en exploitant directement la double sortie de notre
+\emph{DINO}~v3. Comme la configuration entra\^ine simultan\'ement les classes
+\texttt{pancreas} et \texttt{tumor}, nous gardons la bo\^ite \texttt{pancreas}
+de plus haut score, la dilatons de 20~px, et n'acceptons une bo\^ite
+\texttt{tumor} que si elle recouvre ce voisinage \`a au moins 10\,\%. Un
+\emph{post-processing} \'el\'ementaire (composante connexe maximale, filtre
+de taille) supprime les masques aberrants. Cette logique est document\'ee
+dans \texttt{experiments/baseline\_v2/}.
+
+Le gain est significatif (sp\'ecificit\'e 0{,}40 et DICE 0{,}50) sans entra\^iner
+de mod\`ele suppl\'ementaire, ce qui simplifie la cha\^ine. La sp\'ecificit\'e
+plafonne cependant en de\c{c}\`a de 0{,}50, signe qu'une part des
+hallucinations partage la m\^eme localisation que les vraies tumeurs et ne
+peut donc pas \^etre rejet\'ee par un simple crit\`ere spatial.
+
+\subsection{Classifieur ResNet-18 d'ensemble}
+
+Les sections pr\'ec\'edentes montrent que les filtres spatiaux et
+s\'emantiques d\'eplacent le compromis sensibilit\'e/sp\'ecificit\'e sur la
+m\^eme courbe sans en changer la forme globale. Pour modifier qualitativement
+ce compromis, il faut introduire un nouveau signal d'apprentissage. Nous
+entra\^inons donc un classifieur \emph{patch-level} qui juge chaque candidat
+\`a partir de sa texture locale, signal qui n'est pr\'esent ni dans
+\emph{DINO} ni dans le \emph{U-Net} pancr\'eas.
+
+Le pipeline final, document\'e dans \texttt{MSD\_RECALL\_STRATEGY.md},
+op\`ere ainsi. \emph{DINO} g\'en\`ere jusqu'\`a cinq candidats \`a un seuil
+abaiss\'e de 0{,}05, plus permissif que pr\'ec\'edemment afin de ne pas
+sacrifier la sensibilit\'e en amont. Le filtre pancr\'eas reste actif mais
+relativement large (marge 35~px). Chaque candidat survivant est crop\'e en
+224$\times$224 puis pass\'e \`a cinq ResNet-18 entra\^in\'es sur le m\^eme
+jeu de \emph{patches} mais avec des graines diff\'erentes. Les probabilit\'es
+sont agr\'eg\'ees par moyenne p\'enalis\'ee (\'equation~2). Au moment de la
+d\'ecision, on conserve les candidats dont le score d'ensemble d\'epasse un
+seuil $\tau_{\text{ResNet}}$ calibr\'e sur la validation par balayage
+$F_{\beta=2}$ avec contrainte de pr\'ecision $P\geq0{,}80$. Jusqu'\`a deux
+candidats sont alors envoy\'es \`a \emph{MedSAM} et leurs masques sont
+fusionn\'es par union.
+
+La qualit\'e de cette d\'ecision repose enti\`erement sur le jeu d'entra\^inement
+du classifieur. Si l'on se contentait de positifs et de n\'egatifs choisis au
+hasard, le ResNet apprendrait des indices triviaux comme la pr\'esence de
+muqueuse intestinale ou la teinte g\'en\'erale, et n'attaquerait pas le
+probl\`eme r\'eel des hallucinations de \emph{DINO}. Nous \'echantillonnons
+donc les n\'egatifs durs en abaissant le seuil de \emph{DINO} \`a 0{,}01 et
+$\textit{top-k}=12$ pendant l'extraction (\texttt{extract\_hard\_negatives.py}),
+suivant l'esprit d'\emph{Online Hard Example Mining}~\cite{shrivastava2016ohem}.
+Les positifs \emph{ground-truth} sont l\'eg\`erement \emph{jitter\'es}
+(translation $\pm$12\,\%, \emph{scale} $\pm$18\,\%) pour robustifier le
+mod\`ele, et le ratio final est born\'e entre 2:1 et 4:1 n\'egatifs/positifs.
+
+Le tableau~\ref{tab:abl} reporte le gain. La sp\'ecificit\'e atteint 0{,}74
+contre 0{,}17 pour le \emph{baseline}, soit une am\'elioration de 57 points,
+au prix d'une perte de 10 points de sensibilit\'e. Le F1 monte \`a 0{,}81 et
+le DICE moyen sur images positives \`a 0{,}54.
+
+\subsection{Calibration du seuil et analyse des faux n\'egatifs}
+
+Les seuils \emph{per-fold} obtenus pendant l'entra\^inement (tableau~\ref{tab:thresh})
+montrent une variabilit\'e marqu\'ee, signe que les cinq r\'eseaux apprennent
+des d\'ecisions sensiblement diff\'erentes. Cette variabilit\'e justifie
+\emph{a posteriori} le choix d'un ensemble plut\^ot que d'un mod\`ele unique.
+Le seuil global retenu pour le test (0{,}37) provient de l'agr\'egation par
+moyenne p\'enalis\'ee, qui d\'eplace l\'eg\`erement la d\'ecision vers la
+prudence.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lr}
+\toprule
+\emph{Fold} ResNet & Seuil $\tau_{\beta=2}$ \\
+\midrule
+1 & 0{,}539 \\
+2 & 0{,}343 \\
+3 & 0{,}564 \\
+4 & 0{,}841 \\
+5 & 0{,}641 \\
+\midrule
+M\'ediane & 0{,}564 \\
+Seuil ensemble retenu & 0{,}370 \\
+\bottomrule
+\end{tabular}
+\caption{Seuils ResNet par \emph{fold} sur la validation. La large dispersion
+motive l'agr\'egation par moyenne p\'enalis\'ee.}
+\label{tab:thresh}
+\end{table}
+
+Le script \texttt{test\_gd\_msd\_final\_recall.py} \'etiquette chaque faux
+n\'egatif selon sa cause directe. La majorit\'e tombe dans la cat\'egorie
+\texttt{dino\_or\_spatial\_filters}, c'est-\`a-dire que \emph{DINO} ne propose
+aucun candidat sur la coupe concern\'ee. Le classifieur n'est donc pas
+limitant en sensibilit\'e, et la borne sup\'erieure que pourrait atteindre
+notre cha\^ine d\'epend principalement du \emph{recall} du d\'etecteur
+amont.
+
+\section{Analyse Critique}
+
+Le \emph{fine-tuning} de \emph{Grounding~DINO} avec \emph{focal loss} et
+trois cha\^ines \emph{distractor} se r\'ev\`ele indispensable~; sans cet
+ajustement, le mod\`ele transf\'er\'e en \emph{zero-shot} ne d\'epasse pas
+mAP$<$0{,}05 et la cha\^ine compl\`ete devient inutilisable. La cha\^ine
+\emph{detector$+$MedSAM} reste un \emph{baseline} solide en sensibilit\'e
+d\`es lors que le d\'etecteur est sp\'ecialis\'e, parce que \emph{MedSAM}
+tol\`ere une bo\^ite m\^eme grossi\`ere et atteint 0{,}88 de DICE en oracle.
+
+L'utilisation de \emph{prompts} n\'egatifs tels que ``\texttt{no~tumor}''
+\'echoue parce que l'encodeur BERT~\cite{devlin2019bert} ne traite pas la
+n\'egation s\'emantiquement. L'introduction de \emph{distractors}
+positifs (``\texttt{normal pancreas tissue}'', ``\texttt{bowel gas}'') a un
+effet plus tangible mais limit\'e \`a une dizaine de points de pr\'ecision.
+
+L'\'echec de la boucle agentique m\'erite quelques mots. Nous esp\'erions
+qu'un mod\`ele multimodal \emph{frontier} pourrait jouer le r\^ole d'un
+second avis radiologique, mais trois facteurs combinent leurs effets contre
+cette esp\'erance. Le \emph{crop} pr\'esent\'e a une r\'esolution insuffisante
+pour discriminer une tumeur d'un parenchyme sain, le mod\`ele tend \`a
+accepter par d\'efaut, et son non-d\'eterminisme rend toute calibration peu
+fiable.
+
+L'analyse comparative du tableau~\ref{tab:abl} d\'egage un sch\'ema clair.
+Les portes purement spatiales ou par seuil d\'eplacent le point de
+fonctionnement le long d'une m\^eme courbe sensibilit\'e/sp\'ecificit\'e
+sans changer sa forme. Seul le ResNet d'ensemble parvient \`a d\'ecaler la
+courbe globalement, parce qu'il apporte un signal d'apprentissage suppl\'ementaire
+que ne capture aucun autre composant. Sa d\'ecomposition en \emph{region
+proposal} amont et classification \emph{patch-level} aval rappelle
+\emph{Mask R-CNN}~\cite{he2017maskrcnn}, et confirme empiriquement que la
+texture locale d'un \emph{patch} est un crit\`ere compl\'ementaire \`a un
+score d'alignement texte-image.
+
+Notre protocole d'\'evaluation pr\'esente n\'eanmoins deux limites
+m\'ethodologiques importantes. D'une part, toutes les m\'etriques sont
+calcul\'ees sur des coupes 2D ind\'ependantes, alors que les tumeurs
+pancr\'eatiques apparaissent typiquement sur plusieurs coupes adjacentes,
+contrairement aux hallucinations. Une simple agr\'egation \emph{multi-slice}
+am\'eliorerait probablement la sp\'ecificit\'e sans co\^ut sensibilit\'e.
+D'autre part, le \emph{split} 50/50 du test a \'et\'e construit pour faciliter
+la comparaison entre m\'ethodes, mais ne refl\`ete pas la pr\'evalence
+clinique r\'eelle des coupes pathologiques. Une \'evaluation sur une
+distribution naturelle r\'e\'evaluerait la valeur pratique de chaque
+composant.
+
+Enfin, l'ensemble des \emph{checkpoints} (DINO~v3, U-Net pancr\'eas, cinq
+ResNet-18) tient en moins d'un gigaoctet, et l'inf\'erence \emph{end-to-end}
+sur une coupe prend environ 300~ms sur GPU~T4. Le co\^ut total d'entra\^inement
+reste sous 90~minutes de calcul GPU, soit un ordre de grandeur inf\'erieur
+\`a celui de \emph{nnU-Net} 3D pour un probl\`eme comparable, ce qui rend
+notre approche int\'eressante pour des d\'eploiements rapides.
+
+\section{Conclusion}
+
+Notre projet documente une transition. Sur \emph{Kvasir-SEG}, la cha\^ine
+\emph{Grounding~DINO}+\emph{MedSAM} fonctionne pratiquement sans intervention
+humaine et atteint un DICE oracle de 0{,}95. Sur \emph{MSD~Pancreas}, la
+m\^eme cha\^ine s'effondre en sp\'ecificit\'e, et seule l'introduction d'un
+classifieur appris en aval restaure un compromis exploitable. Nos
+exp\'eriences montrent que les filtres spatiaux et les agents multimodaux
+ne d\'eplacent que la position le long d'une courbe fixe, tandis qu'un
+signal d'apprentissage \emph{patch-level}, entra\^in\'e sur les n\'egatifs
+durs g\'en\'er\'es par le d\'etecteur lui-m\^eme, change qualitativement le
+compromis. Le pipeline final atteint un F1 de 0{,}81 et un DICE moyen de
+0{,}54 sur les coupes positives. L'int\'egralit\'e du code, des donn\'ees et
+des \emph{checkpoints} est publi\'ee \`a~\url{https://github.com/moradBMH/INF8225_Projet}.
+
+\section*{Remerciements}
+
+Nous remercions les charg\'es de laboratoire INF8225 pour leurs retours
+m\'ethodologiques, ainsi que les auteurs de \emph{MedSAM},
+\emph{Grounding~DINO} et de la base \emph{Medical Segmentation Decathlon}
+pour la mise \`a disposition de leurs artefacts.
+
+\bibliographystyle{named}
+\bibliography{ijcai19}
+
+\end{document}
