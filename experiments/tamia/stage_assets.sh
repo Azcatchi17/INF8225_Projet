@@ -229,6 +229,19 @@ if [[ -n "${GDRIVE_FOLDER_URL:-}" ]]; then
         mv "$medsam_ckpt" "$DEST_MEDSAM_CKPT"
     fi
 
+    # --- dispatch (optionnel) : crops hard-negative deja extraits --------------
+    # Si le folder Drive contient classifier_dataset_hard/ (zippe ou non), on
+    # le pose dans le cwd des jobs. Ca permet de skip l etape 01 :
+    #   bash experiments/tamia/submit_all.sh --from 02
+    hard_dir="$(find "$STAGING" -type d -name "classifier_dataset_hard" -print -quit || true)"
+    if [[ -n "$hard_dir" && -d "$hard_dir" ]]; then
+        DEST_HARD="$TAMIA_REPO/data/classifier_dataset_hard"
+        echo "[stage] dispatch: classifier_dataset_hard $hard_dir -> $DEST_HARD"
+        mkdir -p "$(dirname "$DEST_HARD")"
+        rm -rf "$DEST_HARD"
+        mv "$hard_dir" "$DEST_HARD"
+    fi
+
     rm -rf "$STAGING"
 fi
 
