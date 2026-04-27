@@ -63,15 +63,15 @@ DUAL_PROMPT_ALPHA = 0.5             # weight on max distractor score in differen
 # G3 — tumor-presence threshold (CALIBRATE on val, then hard-code the result here)
 TUMOR_DIFF_THRESHOLD = 0.25
 
-# --- Gemma / Gemini --------------------------------------------------------
-GEMMA_MODEL_ID = "gemini-3-flash-preview"
-GEMMA_API_KEY_ENV = "GEMINI_API_KEY"
-GEMMA_IMAGE_SIDE = 512
-GEMMA_MAX_REQUESTS_PER_MIN = 25
-GEMMA_MAX_RETRIES = 12
-GEMMA_RETRY_BASE_DELAY = 5.0
-GEMMA_RETRY_MAX_DELAY = 45.0
-GEMMA_RETRY_BUFFER_SEC = 2.0
+# --- Gemini / Gemini --------------------------------------------------------
+GEMINI_MODEL_ID = "gemini-3-flash-preview"
+GEMINI_API_KEY_ENV = "GEMINI_API_KEY"
+GEMINI_IMAGE_SIDE = 512
+GEMINI_MAX_REQUESTS_PER_MIN = 25
+GEMINI_MAX_RETRIES = 12
+GEMINI_RETRY_BASE_DELAY = 5.0
+GEMINI_RETRY_MAX_DELAY = 45.0
+GEMINI_RETRY_BUFFER_SEC = 2.0
 
 # --- MedSAM / device ------------------------------------------------------
 DEVICE = "cuda"

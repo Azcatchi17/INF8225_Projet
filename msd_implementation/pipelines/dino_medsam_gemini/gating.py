@@ -169,17 +169,17 @@ def _vlm_verify_crop(
     """Ask Gemini if a padded crop shows a pancreatic tumor. Returns None
     if Gemini is unavailable so the caller can skip gracefully."""
     try:
-        from .models import get_gemma_client
+        from .models import get_gemini_client
     except Exception:
         return None
 
     try:
-        client = get_gemma_client()
+        client = get_gemini_client()
     except Exception:
         return None
 
     from google.genai import types
-    from .gemma import _downscale_png  # private import; stable enough for internal use
+    from .gemini import _downscale_png  # private import; stable enough for internal use
     from PIL import Image
     import json
     import re

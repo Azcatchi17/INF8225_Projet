@@ -33,15 +33,15 @@ class MaskMetrics:
     def to_dict(self) -> dict:
         return asdict(self)
 
-    def to_gemma_dict(self) -> dict:
-        """Same as to_dict, but without DICE (Gemma must not see the GT signal)."""
+    def to_gemini_dict(self) -> dict:
+        """Same as to_dict, but without DICE (Gemini must not see the GT signal)."""
         d = asdict(self)
         d.pop("dice", None)
         return d
 
 
 @dataclass
-class GemmaAction:
+class GeminiAction:
     action: str
     params: dict
     rationale: str
@@ -57,7 +57,7 @@ class IterationResult:
     points_used: list[list[float]]
     point_labels: list[int]
     metrics: MaskMetrics
-    gemma_action: Optional[GemmaAction]
+    gemini_action: Optional[GeminiAction]
     dice_vs_gt: Optional[float]
     elapsed_ms: float
     # Kept in-memory only (not JSON-serialised)
@@ -70,7 +70,7 @@ class IterationResult:
             "points_used": [list(p) for p in self.points_used],
             "point_labels": list(self.point_labels),
             "metrics": self.metrics.to_dict(),
-            "gemma_action": self.gemma_action.to_dict() if self.gemma_action else None,
+            "gemini_action": self.gemini_action.to_dict() if self.gemini_action else None,
             "dice_vs_gt": self.dice_vs_gt,
             "elapsed_ms": self.elapsed_ms,
         }

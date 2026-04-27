@@ -1,11 +1,11 @@
-"""Convert Gemma action dicts into concrete (box, points, labels) updates."""
+"""Convert Gemini action dicts into concrete (box, points, labels) updates."""
 from __future__ import annotations
 
 from typing import Literal, Optional
 
 import numpy as np
 
-from .state import Box, GemmaAction
+from .state import Box, GeminiAction
 
 ActionName = Literal[
     "stop", "add_positive", "add_negative",
@@ -52,7 +52,7 @@ def _coerce_xy(p: dict, default_x: float, default_y: float) -> tuple[float, floa
 
 
 def apply_action(
-    action: GemmaAction,
+    action: GeminiAction,
     prev_box: list[float],
     prev_points: list[list[float]],
     prev_labels: list[int],
@@ -88,7 +88,7 @@ def apply_action(
     return box, points, labels
 
 
-def is_action_sane(action: GemmaAction, prev_mask: Optional[np.ndarray]) -> bool:
+def is_action_sane(action: GeminiAction, prev_mask: Optional[np.ndarray]) -> bool:
     """Reject destructive add_positive calls that would move the point OUTSIDE
     the current mask while the mask is healthy (non-empty). Gemini sometimes
     returns a point on the image background, which sends MedSAM chasing noise."""

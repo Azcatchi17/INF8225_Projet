@@ -89,7 +89,7 @@ def _downscale_png(img: Image.Image, side: int) -> bytes:
 
 
 def _parse_json_loose(text: str) -> dict:
-    """Gemma sometimes wraps JSON in ```json fences. Strip them."""
+    """Gemini sometimes wraps JSON in ```json fences. Strip them."""
     t = text.strip()
     if t.startswith("```"):
         t = t.strip("`")
@@ -115,7 +115,7 @@ def _extract_retry_delay(exc: Exception) -> float | None:
     return None
 
 
-class GemmaClient:
+class GeminiClient:
     def __init__(self, api_key: str, model_id: str) -> None:
         from google import genai  # imported lazily so non-Colab imports work
 
@@ -152,7 +152,7 @@ class GemmaClient:
             )
         except Exception as exc:
             print(
-                f"[gemma] refine_prompt fallback after {type(exc).__name__}: "
+                f"[gemini] refine_prompt fallback after {type(exc).__name__}: "
                 "using the raw user prompt",
                 flush=True,
             )
@@ -183,9 +183,9 @@ class GemmaClient:
     ) -> MaskAction:
         from google.genai import types
 
-        orig_png = _downscale_png(Image.fromarray(image_np), config.GEMMA_IMAGE_SIDE)
+        orig_png = _downscale_png(Image.fromarray(image_np), config.GEMINI_IMAGE_SIDE)
         overlay = _overlay_rgba(image_np, mask)
-        overlay_png = _downscale_png(overlay, config.GEMMA_IMAGE_SIDE)
+        overlay_png = _downscale_png(overlay, config.GEMINI_IMAGE_SIDE)
 
         instructions = (
             f"Target: {refined_prompt}. "
@@ -212,7 +212,7 @@ class GemmaClient:
             )
         except Exception as exc:
             print(
-                f"[gemma] analyze_mask fallback after {type(exc).__name__}: "
+                f"[gemini] analyze_mask fallback after {type(exc).__name__}: "
                 "returning stop",
                 flush=True,
             )
@@ -235,7 +235,7 @@ class GemmaClient:
             return MaskAction(**_parse_json_loose(response_text))
             
         except (ValidationError, json.JSONDecodeError, AttributeError, IndexError) as e:
-            print(f"[gemma] parse_failure: {str(e)}")
+            print(f"[gemini] parse_failure: {str(e)}")
             return MaskAction(action="stop", rationale=f"parse_failure:{type(e).__name__}")
 
     # ------------------------------------------------------------------
@@ -256,7 +256,7 @@ class GemmaClient:
 
         img = Image.open(image_path)
         W, H = img.size
-        png = _downscale_png(img, config.GEMMA_IMAGE_SIDE)
+        png = _downscale_png(img, config.GEMINI_IMAGE_SIDE)
 
         system = (
             "You are a medical object detector for MSD Pancreas (abdominal CT "
@@ -288,7 +288,7 @@ class GemmaClient:
             )
         except Exception as exc:
             print(
-                f"[gemma] detect_boxes fallback after {type(exc).__name__}: "
+                f"[gemini] detect_boxes fallback after {type(exc).__name__}: "
                 "returning no boxes",
                 flush=True,
             )
@@ -323,7 +323,7 @@ class GemmaClient:
 
     # ------------------------------------------------------------------
     def _wait_for_rate_limit(self) -> None:
-        limit = config.GEMMA_MAX_REQUESTS_PER_MIN
+        limit = config.GEMINI_MAX_REQUESTS_PER_MIN
         if limit <= 0:
             return
 
@@ -335,7 +335,7 @@ class GemmaClient:
         if len(self._request_times) < limit:
             return
 
-        sleep_for = window - (now - self._request_times[0]) + config.GEMMA_RETRY_BUFFER_SEC
+        sleep_for = window - (now - self._request_times[0]) + config.GEMINI_RETRY_BUFFER_SEC
         if sleep_for > 0:
             time.sleep(sleep_for)
 
@@ -346,32 +346,32 @@ class GemmaClient:
     # ------------------------------------------------------------------
     def _retry(self, fn):
         last_exc: Exception | None = None
-        for attempt in range(config.GEMMA_MAX_RETRIES):
+        for attempt in range(config.GEMINI_MAX_RETRIES):
             self._wait_for_rate_limit()
             try:
                 result = fn()
                 self._request_times.append(time.monotonic())
                 return result
-            except Exception as e:  # noqa: BLE001 — any Gemma SDK error
+            except Exception as e:  # noqa: BLE001 — any Gemini SDK error
                 last_exc = e
                 traceback.print_exc()
-                if attempt == config.GEMMA_MAX_RETRIES - 1:
+                if attempt == config.GEMINI_MAX_RETRIES - 1:
                     break
                 retry_delay = _extract_retry_delay(e)
                 if retry_delay is None:
-                    retry_delay = config.GEMMA_RETRY_BASE_DELAY * (2 ** attempt)
-                retry_delay = min(retry_delay, config.GEMMA_RETRY_MAX_DELAY)
+                    retry_delay = config.GEMINI_RETRY_BASE_DELAY * (2 ** attempt)
+                retry_delay = min(retry_delay, config.GEMINI_RETRY_MAX_DELAY)
                 print(
-                    f"[gemma] attempt {attempt + 1}/{config.GEMMA_MAX_RETRIES} "
+                    f"[gemini] attempt {attempt + 1}/{config.GEMINI_MAX_RETRIES} "
                     f"failed ({type(e).__name__}); sleeping {retry_delay:.1f}s",
                     flush=True,
                 )
-                time.sleep(retry_delay + config.GEMMA_RETRY_BUFFER_SEC)
+                time.sleep(retry_delay + config.GEMINI_RETRY_BUFFER_SEC)
         raise last_exc  # type: ignore[misc]
 
 
 # ---------------------------------------------------------------------
-def smoke_test(client: GemmaClient, image_np: np.ndarray) -> dict:
+def smoke_test(client: GeminiClient, image_np: np.ndarray) -> dict:
     """Round-trip text + image to verify the key and model work."""
     ref = client.refine_prompt("find the tumor")
     dummy_mask = np.zeros(image_np.shape[:2], dtype=np.uint8)

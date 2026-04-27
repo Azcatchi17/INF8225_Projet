@@ -1,4 +1,4 @@
-"""Main agentic loop: DINO → MedSAM → Gemma review → correction → repeat."""
+"""Main agentic loop: DINO → MedSAM → Gemini review → correction → repeat."""
 from __future__ import annotations
 
 import time
@@ -8,10 +8,10 @@ import numpy as np
 
 from . import config, grounding_dino as gd, medsam, metrics as M
 from .actions import apply_action, is_action_sane
-from .gemma import MaskAction
+from .gemini import MaskAction
 from .logging_utils import log_run
-from .models import get_gemma_client
-from .state import AgentState, Box, GemmaAction, IterationResult, MaskMetrics
+from .models import get_gemini_client
+from .state import AgentState, Box, GeminiAction, IterationResult, MaskMetrics
 
 
 def _box_center(box: list[float]) -> tuple[float, float]:
@@ -31,8 +31,8 @@ def _is_trusted(m: MaskMetrics) -> bool:
     )
 
 
-def _as_gemma_action(a: MaskAction) -> GemmaAction:
-    return GemmaAction(action=a.action, params=a.params, rationale=a.rationale)
+def _as_gemini_action(a: MaskAction) -> GeminiAction:
+    return GeminiAction(action=a.action, params=a.params, rationale=a.rationale)
 
 
 def _run_iteration(
@@ -43,7 +43,7 @@ def _run_iteration(
     labels: list[int],
     H: int,
     W: int,
-    gemma_action: Optional[GemmaAction],
+    gemini_action: Optional[GeminiAction],
     gt_mask: np.ndarray | None,
 ) -> IterationResult:
     t0 = time.perf_counter()
@@ -60,7 +60,7 @@ def _run_iteration(
         points_used=[list(p) for p in points],
         point_labels=list(labels),
         metrics=mm,
-        gemma_action=gemma_action,
+        gemini_action=gemini_action,
         dice_vs_gt=mm.dice,
         elapsed_ms=elapsed,
         mask=mask,
@@ -80,10 +80,10 @@ def run_agent(
     state.image_np = medsam.load_image(image_path)
     H, W = state.image_np.shape[:2]
 
-    gemma = get_gemma_client()
+    gemini = get_gemini_client()
 
-    # 1. Gemma refines the DINO query
-    ref = gemma.refine_prompt(user_text)
+    # 1. Gemini refines the DINO query
+    ref = gemini.refine_prompt(user_text)
     state.refined_prompt = ref.search_text
     state.synonyms = list(ref.synonyms)
 
@@ -118,7 +118,7 @@ def run_agent(
                 points_used=[],
                 point_labels=[],
                 metrics=M.mask_metrics(np.zeros((H, W), np.uint8), None, gt_mask),
-                gemma_action=None,
+                gemini_action=None,
                 dice_vs_gt=(
                     M.dice(np.zeros((H, W), np.uint8), gt_mask) if gt_mask is not None else None
                 ),
@@ -160,7 +160,7 @@ def run_agent(
             state.stop_reason = "trust_region"
             break
 
-        # Short-circuits save Gemma calls on obvious failures
+        # Short-circuits save Gemini calls on obvious failures
         if prev.metrics.is_empty:
             cx, cy = _box_center(prev.box_used_xyxy)
             action = MaskAction(
@@ -174,16 +174,16 @@ def run_agent(
                 rationale="oversized short-circuit",
             )
         else:
-            action = gemma.analyze_mask(
-                state.image_np, prev.mask, prev.metrics.to_gemma_dict(),
+            action = gemini.analyze_mask(
+                state.image_np, prev.mask, prev.metrics.to_gemini_dict(),
                 state.refined_prompt, i, max_iter,
             )
 
         if action.action == "stop":
-            state.stop_reason = "gemma_stop"
+            state.stop_reason = "gemini_stop"
             break
 
-        ga = _as_gemma_action(action)
+        ga = _as_gemini_action(action)
         if not is_action_sane(ga, prev.mask):
             state.stop_reason = "rejected_add_positive"
             break

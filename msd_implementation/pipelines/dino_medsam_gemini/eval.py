@@ -30,7 +30,7 @@ def _load_gt(file_name: str) -> np.ndarray:
 
 
 def _one_shot(img_path: Path, gt: np.ndarray) -> tuple[float, int]:
-    """Baseline: single DINO → MedSAM pass, no Gemma, no refinement."""
+    """Baseline: single DINO → MedSAM pass, no Gemini, no refinement."""
     image_np = medsam.load_image(str(img_path))
     H, W = image_np.shape[:2]
     boxes = gd.detect(str(img_path), config.DEFAULT_DINO_TEXT)
