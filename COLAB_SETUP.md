@@ -11,21 +11,33 @@ Expected layout inside the Drive folder:
 
 ```
 Projet_Medsam/                                         ← Drive folder
+├── manifest.json
 ├── data/
-│   └── Kvasir-SEG/
-│       ├── images/              (1000 .jpg)
-│       ├── masks/               (1000 .jpg)
-│       ├── kavsir_bboxes.json
-│       ├── train.json  val.json  test.json
-│       └── polyp_label_map.json
+│   ├── Kvasir-SEG/
+│   └── MSD_pancreas/
 ├── work_dirs/
-│   └── polyp_config/
-│       ├── polyp_config.py
-│       └── best_coco_bbox_mAP_epoch_2.pth     ← fine-tuned DINO
+│   ├── polyp_config/
+│   ├── polyp_config_v2/
+│   ├── tumor_config_v3/
+│   └── pancreas_unet/
 ├── work_dir/
-│       └── MedSAM/
-│           └── medsam_vit_b.pth
-└── grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth   (optional, training only)
+│   └── MedSAM/
+│       └── medsam_vit_b.pth
+├── models_weights/
+│   ├── grounding_dino_swin-t_pretrain_obj365_goldg.py
+│   └── grounding_dino_swin-t_pretrain_obj365_goldg_*.pth
+└── outputs/
+    ├── kvasir_implementation/
+    │   ├── oracle_baseline_kvasir/
+    │   ├── calibrate_dino_threshold_kvasir/
+    │   └── test_kvasir/
+    └── msd_implementation/
+        ├── dino_calibration/
+        ├── dino_medsam_cascade/
+        ├── dino_medsam_gemini/
+        ├── resnet18_recall/
+        ├── three_slice_context/
+        └── resnet50_wide_crop/
 ```
 
 If your shortcut lands at a different path, pass it explicitly:
@@ -45,10 +57,12 @@ Notebooks with a Colab bootstrap cell already wired:
 | Notebook | Purpose | Needs GPU? | Colab-ready |
 |---|---|---|---|
 | `grounding_dino.ipynb` | detection inference with fine-tuned DINO | **yes** | yes |
-| `segment_kvasir.ipynb` | MedSAM segmentation using GT bboxes | **yes** | yes |
-| `test_gd.ipynb` | full DINO → MedSAM eval pipeline | **yes** | yes |
-| `analyze_kvasir.ipynb` | post-hoc analysis of `dice_*.csv` | CPU OK | — |
-| `convert_to_coco.ipynb` | COCO split generation (run once) | CPU OK | — |
+| `kvasir_implementation/oracle_baseline_kvasir.ipynb` | Kvasir MedSAM oracle baseline | **yes** | yes |
+| `kvasir_implementation/test_kvasir.ipynb` | Kvasir DINO + MedSAM zero-shot/fine-tuned evaluation | **yes** | yes |
+| `msd_implementation/notebooks/resnet18_recall/*.ipynb` | MSD recall-oriented ResNet-18 pipeline | **yes** | yes |
+| `msd_implementation/notebooks/three_slice_context/*.ipynb` | MSD 3-slice ResNet-18 pipeline | **yes** | yes |
+| `msd_implementation/notebooks/resnet50_wide_crop/*.ipynb` | MSD final ResNet-50 wide-crop pipeline and figures | **yes** | yes |
+| `msd_implementation/notebooks/dino_medsam_cascade/*.ipynb` | MSD DINO + MedSAM cascade baselines | **yes** | yes |
 
 The bootstrap cell at the top of each Colab-ready notebook:
 1. Clones this repo into `/content/INF8225_Projet` (if not already there) and `cd`s into it.
@@ -61,7 +75,7 @@ The bootstrap cell at the top of each Colab-ready notebook:
    - `matplotlib==3.8.4`
 4. Installs `mmengine==0.10.7`, `mmcv==2.2.0`, and `mmdet==3.3.0` from prebuilt wheels only.
 5. Installs the small extras from `colab/requirements-colab.txt` (`transformers`, `nltk`, `pycocotools`, ...).
-6. Mounts Drive, locates the project folder, creates symlinks so the notebook code (which uses paths like `data/Kvasir-SEG/...` and `work_dirs/polyp_config/...`) finds everything on Drive unchanged.
+6. Mounts Drive, locates the project folder, creates `manifest.json` and the `outputs/` tree, then symlinks `data/`, `work_dirs/`, `outputs/`, `MedSAM/work_dir/`, and the Grounding DINO weight into the repo.
 
 ## Repairing a stale Colab runtime
 
@@ -77,7 +91,7 @@ If `torch` was already imported before the bootstrap cell ran, restart the runti
 
 ## 4. Outputs persist on Drive automatically
 
-Because `data/` and `work_dirs/` are symlinks to Drive, every write from a notebook — new CSVs in `data/results/`, visualizations in `data/outputs*/`, training checkpoints in `work_dirs/polyp_config/` — lands on your Drive. Nothing is lost when the Colab VM is recycled.
+Because `data/`, `work_dirs/`, and `outputs/` are symlinks to Drive, every notebook write lands under the same academic layout. Generated CSVs, figures, masks, caches, runs, and checkpoints go to `outputs/<implementation>/<pipeline>/...`. Nothing is lost when the Colab VM is recycled.
 
 ## Running locally
 

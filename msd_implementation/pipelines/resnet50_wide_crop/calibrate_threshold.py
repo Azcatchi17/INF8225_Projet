@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from colab.drive_paths import output_dir
 from msd_implementation.pipelines.common.proposal_strategy import (
     ProposalConfig,
     ensure_3c,
@@ -42,10 +43,11 @@ from msd_implementation.pipelines.three_slice_context.slice_stack import stack_3
 
 
 CHECKPOINT_PREFIX = "resnet50_wide_crop_fold"
-OUT_TXT = "optimal_threshold_resnet50_wide_crop.txt"
-OUT_JSON = "optimal_threshold_resnet50_wide_crop.json"
-OUT_CSV = "data/results/calibration_threshold_resnet50_wide_crop.csv"
-OUT_SWEEP = "data/results/threshold_sweep_3slice_v2.csv"
+METRICS_DIR = output_dir("msd_implementation", "resnet50_wide_crop", "metrics")
+OUT_TXT = METRICS_DIR / "optimal_threshold_resnet50_wide_crop.txt"
+OUT_JSON = METRICS_DIR / "optimal_threshold_resnet50_wide_crop.json"
+OUT_CSV = METRICS_DIR / "calibration_threshold_resnet50_wide_crop.csv"
+OUT_SWEEP = METRICS_DIR / "threshold_sweep_3slice_v2.csv"
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -78,7 +80,7 @@ dino_model = init_detector(
 )
 
 ensemble_models = []
-checkpoint_dir = get_resnet_checkpoint_dir()
+checkpoint_dir = get_resnet_checkpoint_dir("resnet50_wide_crop")
 print(f"Chargement des checkpoints ResNet-50 3-slice depuis : {checkpoint_dir.resolve()}")
 for i in range(1, 6):
     model = models.resnet50(weights=None)
@@ -161,7 +163,6 @@ for img_info in tqdm(val_data["images"], desc="Calibration Val Set v2"):
 df = pd.DataFrame(
     [{k: v for k, v in row.items() if k != "candidates"} for row in rows]
 )
-os.makedirs("data/results", exist_ok=True)
 df.to_csv(OUT_CSV, index=False)
 
 optimal_thresh, best_metrics, sweep = find_best_threshold(

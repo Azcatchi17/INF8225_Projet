@@ -3,10 +3,13 @@ import sys
 import json
 import argparse
 import numpy as np
+import pandas as pd
 import torch
 import torchvision
 from skimage import io, transform
 from tqdm import tqdm
+
+from colab.drive_paths import output_dir as drive_output_dir
 
 # Fonction utilitaire
 def calculate_dice(mask_true, mask_pred):
@@ -20,8 +23,9 @@ def calculate_dice(mask_true, mask_pred):
 # ==========================================
 # FONCTION PRINCIPALE
 # ==========================================
-def run_calibration(dino_config, dino_checkpoint, medsam_checkpoint, 
-                    base_img_folder, base_mask_folder, val_json_path):
+def run_calibration(dino_config, dino_checkpoint, medsam_checkpoint,
+                    base_img_folder, base_mask_folder, val_json_path,
+                    mode):
     
     # Imports tardifs pour s'assurer que le path est bien configuré
     from mmdet.apis import init_detector, inference_detector
@@ -92,6 +96,7 @@ def run_calibration(dino_config, dino_checkpoint, medsam_checkpoint,
 
     best_thresh = 0.05
     best_dice = 0.0
+    rows = []
 
     for thresh in thresholds_to_test:
         dice_scores = []
@@ -120,6 +125,7 @@ def run_calibration(dino_config, dino_checkpoint, medsam_checkpoint,
             dice_scores.append(dice)
             
         mean_dice = np.mean(dice_scores)
+        rows.append({"threshold": float(thresh), "mean_dice": float(mean_dice)})
         print(f"-> Seuil {thresh:.2f} : DICE Moyen = {mean_dice:.4f}")
         
         if mean_dice > best_dice:
@@ -131,6 +137,30 @@ def run_calibration(dino_config, dino_checkpoint, medsam_checkpoint,
     print(f"Meilleur seuil (box_threshold) : {best_thresh:.2f}")
     print(f"DICE correspondant sur validation : {best_dice:.4f}")
     print("="*40)
+
+    metrics_dir = drive_output_dir(
+        "kvasir_implementation",
+        "calibrate_dino_threshold_kvasir",
+        "metrics",
+    )
+    sweep_path = metrics_dir / f"dino_threshold_sweep_{mode}.csv"
+    summary_path = metrics_dir / f"dino_calibration_{mode}.json"
+
+    pd.DataFrame(rows).to_csv(sweep_path, index=False)
+    with open(summary_path, "w") as f:
+        json.dump(
+            {
+                "mode": mode,
+                "best_threshold": float(best_thresh),
+                "best_mean_dice": float(best_dice),
+                "base_threshold": BASE_THRESH,
+            },
+            f,
+            indent=2,
+        )
+
+    print(f"CSV : {sweep_path}")
+    print(f"Résumé JSON : {summary_path}")
 
 # ==========================================
 # POINT D'ENTRÉE DU SCRIPT
@@ -167,4 +197,4 @@ if __name__ == "__main__":
     val_json = os.path.join(PROJECT_ROOT, "data/Kvasir-SEG/val.json")
 
     # 4. Lancement
-    run_calibration(cfg_path, ckpt_path, medsam_ckpt, img_dir, mask_dir, val_json)
+    run_calibration(cfg_path, ckpt_path, medsam_ckpt, img_dir, mask_dir, val_json, args.mode)

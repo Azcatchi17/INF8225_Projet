@@ -2,6 +2,8 @@
 from __future__ import annotations
 from pathlib import Path
 
+from colab.drive_paths import output_dir
+
 # --- Repository / Drive paths --------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -19,9 +21,10 @@ MSD_IMAGES = MSD_ROOT
 MSD_MASKS = MSD_ROOT
 MSD_TEST_JSON = MSD_ROOT / "test.json"
 
-AGENT_RUNS_DIR = PROJECT_ROOT / "data" / "agent_runs_msd"
-AGENT_RESULTS_DIR = PROJECT_ROOT / "data" / "agent_results_msd"
-AGENT_CACHE_DIR = PROJECT_ROOT / "data" / "agent_cache_msd"
+AGENT_RUNS_DIR = output_dir("msd_implementation", "dino_medsam_gemini", "runs")
+AGENT_RESULTS_DIR = output_dir("msd_implementation", "dino_medsam_gemini", "metrics")
+AGENT_MASKS_DIR = output_dir("msd_implementation", "dino_medsam_gemini", "masks")
+AGENT_CACHE_DIR = output_dir("msd_implementation", "dino_medsam_gemini", "cache")
 
 # --- Agent loop thresholds ------------------------------------------------
 MAX_ITER = 5

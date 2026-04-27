@@ -1,7 +1,7 @@
 """3-slice variant of train_resnet_kfold_recall.py.
 
 Trains an ensemble of 5 ResNet-18 on the 3-slice patch dataset
-(``data/classifier_dataset_three_slice/``). Saves checkpoints with the
+(``outputs/msd_implementation/three_slice_context/datasets/classifier_dataset_three_slice/``). Saves checkpoints with the
 ``three_slice_fold_*.pth`` prefix so they coexist with the original
 2D ensemble.
 
@@ -27,13 +27,14 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from colab.drive_paths import output_dir
 from msd_implementation.pipelines.common.proposal_strategy import get_resnet_checkpoint_dir
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Entrainement Multi-Seed Ensemble 3-slice sur : {device}")
 
-checkpoint_dir = get_resnet_checkpoint_dir()
+checkpoint_dir = get_resnet_checkpoint_dir("three_slice_context")
 checkpoint_dir.mkdir(parents=True, exist_ok=True)
 print(f"Checkpoints ResNet 3-slice sauvegardes dans : {checkpoint_dir.resolve()}")
 
@@ -48,8 +49,14 @@ NUM_WORKERS = 2
 CHECKPOINT_PREFIX = "three_slice_fold"
 THRESHOLD_PREFIX = "threshold_three_slice_run"
 
-TRAIN_DIR = "data/classifier_dataset_three_slice/train"
-VAL_DIR = "data/classifier_dataset_three_slice/val"
+DATASET_DIR = output_dir(
+    "msd_implementation",
+    "three_slice_context",
+    "datasets",
+    "classifier_dataset_three_slice",
+)
+TRAIN_DIR = DATASET_DIR / "train"
+VAL_DIR = DATASET_DIR / "val"
 
 
 def set_seed(seed: int) -> None:

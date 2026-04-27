@@ -3,12 +3,14 @@ import json
 import os
 
 import numpy as np
+import pandas as pd
 import torch
 from skimage import io
 from tqdm import tqdm
 
 from mmdet.apis import init_detector, inference_detector
 
+from colab.drive_paths import output_dir
 from msd_implementation.pipelines.common.proposal_strategy import ProposalConfig, box_tumor_overlap, ensure_3c, extract_dino_candidates
 
 
@@ -96,7 +98,39 @@ for thresh in thresholds_to_test:
     print(f"{thresh:<12.3f} | {tp:<22} | {fn:<12} | {cand:<10} | {fp:<10}")
 print("=" * 88)
 
+metrics_dir = output_dir("msd_implementation", "dino_calibration", "metrics")
+sweep_path = metrics_dir / "dino_threshold_sweep.csv"
+summary_path = metrics_dir / "dino_calibration_summary.json"
+
+pd.DataFrame(
+    [
+        {
+            "threshold": thresh,
+            **results[thresh],
+        }
+        for thresh in thresholds_to_test
+    ]
+).to_csv(sweep_path, index=False)
+
+min_fn = min(item["fn"] for item in results.values())
+recommended_threshold = max(
+    thresh for thresh in thresholds_to_test if results[thresh]["fn"] == min_fn
+)
+with open(summary_path, "w") as f:
+    json.dump(
+        {
+            "recommended_threshold": recommended_threshold,
+            "selection_rule": "highest_threshold_with_minimum_fn",
+            "minimum_fn": min_fn,
+            "results": {str(thresh): metrics for thresh, metrics in results.items()},
+        },
+        f,
+        indent=2,
+    )
+
 print("\nAnalyse :")
 print("1. Choisis le plus haut seuil DINO qui garde les FN DINO au minimum.")
 print("2. Si les FP boxes explosent a bas seuil, ce n'est pas bloquant tant que ResNet est re-entraine avec extract_hard_negatives.py.")
 print("3. Le seuil runtime recommande pour la strategie recall est 0.05 avant calibration ResNet.")
+print(f"\nCSV : {sweep_path}")
+print(f"Resume JSON : {summary_path}")

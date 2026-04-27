@@ -2,7 +2,7 @@
 
 The wider crop exposes the surrounding pancreatic parenchyma to the
 classifier so the "tumor vs healthy pancreas" decision is no longer made
-on the lesion alone. Output dataset: ``data/classifier_dataset_resnet50_wide_crop/``.
+on the lesion alone. Output dataset: ``outputs/msd_implementation/resnet50_wide_crop/datasets/classifier_dataset_resnet50_wide_crop/``.
 
 Usage (from repo root):
     python -m msd_implementation.pipelines.resnet50_wide_crop.extract_hard_negatives
@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from colab.drive_paths import output_dir
 from msd_implementation.pipelines.common.proposal_strategy import (
     ProposalConfig,
     box_tumor_overlap,
@@ -49,7 +50,12 @@ dino_checkpoint = "work_dirs/tumor_config_v3/best_coco_bbox_mAP_epoch_25.pth"
 dino_model = init_detector(dino_config, dino_checkpoint, device=device)
 
 base_dir = "data/MSD_pancreas"
-output_base_dir = "data/classifier_dataset_resnet50_wide_crop"
+output_base_dir = output_dir(
+    "msd_implementation",
+    "resnet50_wide_crop",
+    "datasets",
+    "classifier_dataset_resnet50_wide_crop",
+)
 
 # Key change vs v1: crop_margin=30 (was 10). The classifier gets enough
 # pancreatic context to see the differential between tumor and surrounding

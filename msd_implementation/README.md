@@ -28,7 +28,7 @@ python -m msd_implementation.pipelines.<iteration>.<step>
 Steps for the recall-oriented iterations (2-4):
 
 ```text
-1. extract_hard_negatives   # mine patches into data/classifier_dataset_*/
+1. extract_hard_negatives   # mine patches into outputs/msd_implementation/<iteration>/datasets/
 2. train_classifier         # train 5x ResNet folds
 3. calibrate_threshold      # F2 sweep on validation
 4. evaluate                 # final test report
@@ -42,6 +42,6 @@ detect-segment-evaluate loop in one pass.
 | Iteration | Patches | Checkpoints | Threshold | Test CSV |
 |-----------|---------|-------------|-----------|----------|
 | 1 | _none_ | _none_ | _none_ | inline |
-| 2 | `data/classifier_dataset_resnet18/` | `resnet18_recall_fold_{1..5}.pth` | `optimal_threshold_resnet18.{txt,json}` | `dice_final_report_resnet18_recall.csv` |
-| 3 | `data/classifier_dataset_three_slice/` | `three_slice_fold_{1..5}.pth` | `optimal_threshold_three_slice_context.{txt,json}` | `dice_final_report_three_slice_context.csv` |
-| 4 | `data/classifier_dataset_resnet50_wide_crop/` | `resnet50_wide_crop_fold_{1..5}.pth` | `optimal_threshold_resnet50_wide_crop.{txt,json}` | `dice_final_report_resnet50_wide_crop.csv` |
+| 2 | `outputs/msd_implementation/resnet18_recall/datasets/classifier_dataset_resnet18/` | `outputs/msd_implementation/resnet18_recall/checkpoints/` | `outputs/msd_implementation/resnet18_recall/metrics/optimal_threshold_resnet18.{txt,json}` | `outputs/msd_implementation/resnet18_recall/metrics/dice_final_report_resnet18_recall.csv` |
+| 3 | `outputs/msd_implementation/three_slice_context/datasets/classifier_dataset_three_slice/` | `outputs/msd_implementation/three_slice_context/checkpoints/` | `outputs/msd_implementation/three_slice_context/metrics/optimal_threshold_three_slice_context.{txt,json}` | `outputs/msd_implementation/three_slice_context/metrics/dice_final_report_three_slice_context.csv` |
+| 4 | `outputs/msd_implementation/resnet50_wide_crop/datasets/classifier_dataset_resnet50_wide_crop/` | `outputs/msd_implementation/resnet50_wide_crop/checkpoints/` | `outputs/msd_implementation/resnet50_wide_crop/metrics/optimal_threshold_resnet50_wide_crop.{txt,json}` | `outputs/msd_implementation/resnet50_wide_crop/metrics/dice_final_report_resnet50_wide_crop.csv` |

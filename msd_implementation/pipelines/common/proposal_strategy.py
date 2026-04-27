@@ -14,6 +14,8 @@ from typing import Iterable
 import numpy as np
 from PIL import Image
 
+from colab.drive_paths import output_dir
+
 
 @dataclass
 class ProposalConfig:
@@ -33,27 +35,13 @@ class ProposalConfig:
         return asdict(self)
 
 
-def get_resnet_checkpoint_dir() -> Path:
+def get_resnet_checkpoint_dir(pipeline: str = "resnet18_recall") -> Path:
     """Return the persistent directory used for ResNet ensemble artifacts."""
-    env_path = os.environ.get("RESNET_CHECKPOINT_DIR") or os.environ.get("INF8225_DRIVE_ROOT")
+    env_path = os.environ.get("RESNET_CHECKPOINT_DIR")
     if env_path:
         return Path(env_path)
 
-    data_path = Path("data")
-    if data_path.is_symlink():
-        resolved = data_path.resolve()
-        if resolved.name == "data":
-            return resolved.parent
-
-    for candidate in (
-        Path("/content/drive/MyDrive/Projet_Medsam"),
-        Path("/content/drive/MyDrive/INF8225_Projet"),
-        Path("/content/drive/MyDrive/INF8225"),
-    ):
-        if candidate.exists():
-            return candidate
-
-    return Path(".")
+    return output_dir("msd_implementation", pipeline, "checkpoints")
 
 
 def ensure_3c(img_np: np.ndarray) -> np.ndarray:

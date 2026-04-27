@@ -49,5 +49,5 @@ iteration 3, and uses `slice_stack` from there as well. This keeps the
 
 `msd_implementation/notebooks/resnet50_wide_crop/05_publication_figures.ipynb`
 generates the 6 figures used in the paper from
-`data/results/dice_final_report_resnet50_wide_crop.csv`. Outputs land
+`outputs/msd_implementation/resnet50_wide_crop/metrics/dice_final_report_resnet50_wide_crop.csv`. Outputs land
 in `report/figures/`.

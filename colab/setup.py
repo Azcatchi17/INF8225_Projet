@@ -9,9 +9,17 @@ from __future__ import annotations
 import importlib.util
 from importlib import metadata
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+from .drive_paths import (
+    DRIVE_CANDIDATES,
+    OUTPUT_PIPELINES,
+    STANDARD_OUTPUT_SUBDIRS,
+    ensure_drive_layout,
+)
 
 DRIVE_FOLDER_ID = "1BAcGyja2SHP3t2OFOleN2cND4QlXb3fW"
 DRIVE_FOLDER_URL = f"https://drive.google.com/drive/folders/{DRIVE_FOLDER_ID}"
@@ -20,38 +28,44 @@ DRIVE_FOLDER_URL = f"https://drive.google.com/drive/folders/{DRIVE_FOLDER_ID}"
 SYMLINK_MAP = {
     "data": "data",
     "work_dirs": "work_dirs",
+    "outputs": "outputs",
     "MedSAM/work_dir": "work_dir",
-    "grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth":
-        "grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth",
+    "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth":
+        "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth",
 }
 
-# Places the user is likely to have dropped the shared folder.
-DRIVE_CANDIDATES = [
-    "/content/drive/MyDrive/Projet_Medsam",
-    "/content/drive/MyDrive/INF8225_Projet",
-    "/content/drive/MyDrive/INF8225",
-    "/content/drive/MyDrive/Colab Notebooks/Projet_Medsam",
-]
+# Small config files are versioned in the repo but useful to mirror into Drive
+# so the shared folder remains self-describing.
+COPY_TO_DRIVE_MAP = {
+    "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg.py":
+        "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg.py",
+    "tumor_config_v3.py":
+        "work_dirs/tumor_config_v3/tumor_config_v3.py",
+    "kvasir_implementation/polyp_config_v2.py":
+        "work_dirs/polyp_config_v2/polyp_config_v2.py",
+}
 
-# Output subdirs the notebooks write to — created on Drive so results persist.
+REPLACE_WITH_SYMLINK = {
+    "data",
+    "work_dirs",
+    "outputs",
+    "MedSAM/work_dir",
+}
+
+# Output subdirs the notebooks write to, relative to the Drive project folder.
 OUTPUT_SUBDIRS = [
-    "data/outputs",
-    "data/outputs_medsam",
-    "data/outputs_medsam_dino",
-    "data/results",
-    "data/agent_runs",
-    "data/agent_results",
-    "data/agent_cache",
-    "data/agent_runs_vlm",
-    "data/agent_results_vlm",
-    "data/agent_cache_vlm",
-    "data/agent_runs_msd",
-    "data/agent_results_msd",
-    "data/agent_cache_msd",
-    "data/agent_results_improved",
     "work_dirs/polyp_config",
+    "work_dirs/polyp_config_v2",
+    "work_dirs/tumor_config_v3",
     "work_dirs/pancreas_unet",
+    "work_dir/MedSAM",
+    "models_weights",
 ]
+for implementation, pipelines in OUTPUT_PIPELINES.items():
+    for pipeline in pipelines:
+        OUTPUT_SUBDIRS.append(f"outputs/{implementation}/{pipeline}")
+        for subdir in STANDARD_OUTPUT_SUBDIRS:
+            OUTPUT_SUBDIRS.append(f"outputs/{implementation}/{pipeline}/{subdir}")
 
 # Colab's preinstalled torch can jump ahead of OpenMMLab wheel support
 # (for example, torch 2.10 + CUDA 12.8). Installing a known-good stack is
@@ -117,8 +131,8 @@ def _find_drive_folder(explicit: str | None) -> Path:
             return p
         raise FileNotFoundError(f"Drive folder not found at {explicit}")
     for c in DRIVE_CANDIDATES:
-        if Path(c).exists():
-            return Path(c)
+        if c.exists():
+            return c
     raise FileNotFoundError(
         "\nProject folder not found under /content/drive/MyDrive.\n"
         f"1. Open {DRIVE_FOLDER_URL}\n"
@@ -336,7 +350,7 @@ def _install_deps(reinstall: bool = False) -> None:
     )
 
 
-def _link(local: Path, target: Path) -> None:
+def _link(local: Path, target: Path, replace_existing: bool = False) -> None:
     if not target.exists():
         print(f"⚠  {target} missing on Drive — skipping {local}")
         return
@@ -347,10 +361,33 @@ def _link(local: Path, target: Path) -> None:
             return
         local.unlink()
     elif local.exists():
-        print(f"⚠  {local} already exists as real file/dir — leaving untouched")
-        return
+        if not replace_existing:
+            print(f"⚠  {local} already exists as real file/dir — leaving untouched")
+            return
+        backup = local.with_name(f"{local.name}_repo")
+        if backup.exists():
+            if local.is_dir():
+                shutil.rmtree(local)
+            else:
+                local.unlink()
+            print(f"✓  removed existing {local} (backup already present)")
+        else:
+            shutil.move(str(local), str(backup))
+            print(f"✓  moved existing {local} → {backup}")
     os.symlink(target, local)
     print(f"✓  linked {local} → {target}")
+
+
+def _copy_to_drive(local: Path, target: Path) -> None:
+    if not local.exists():
+        print(f"⚠  local config missing — skipping {target}")
+        return
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        print(f"✓  {target} already present")
+        return
+    shutil.copy2(local, target)
+    print(f"✓  copied {local} → {target}")
 
 
 def _make_output_dirs(drive_folder: Path) -> None:
@@ -384,9 +421,14 @@ def setup(
         return
 
     project_root = Path.cwd()
-    if not (project_root / "polyp_config.py").exists():
+    expected_paths = [
+        project_root / "colab" / "setup.py",
+        project_root / "kvasir_implementation",
+        project_root / "msd_implementation",
+    ]
+    if not all(path.exists() for path in expected_paths):
         raise RuntimeError(
-            f"{project_root} does not look like INF8225_Projet (polyp_config.py missing). "
+            f"{project_root} does not look like INF8225_Projet. "
             "Clone the repo and %cd into it before calling setup()."
         )
 
@@ -395,9 +437,18 @@ def setup(
         _install_deps(reinstall=reinstall)
 
     drive_root = _find_drive_folder(drive_folder)
+    os.environ["INF8225_DRIVE_ROOT"] = str(drive_root)
+    os.environ["INF8225_OUTPUTS_ROOT"] = str(drive_root / "outputs")
+    ensure_drive_layout(drive_root)
     _make_output_dirs(drive_root)
+    for local_rel, drive_rel in COPY_TO_DRIVE_MAP.items():
+        _copy_to_drive(project_root / local_rel, drive_root / drive_rel)
     for local_rel, drive_rel in SYMLINK_MAP.items():
-        _link(project_root / local_rel, drive_root / drive_rel)
+        _link(
+            project_root / local_rel,
+            drive_root / drive_rel,
+            replace_existing=local_rel in REPLACE_WITH_SYMLINK,
+        )
 
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))

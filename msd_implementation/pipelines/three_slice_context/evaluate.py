@@ -2,7 +2,7 @@
 Reads ``optimal_threshold_three_slice_context.{txt,json}``, loads the
 ``three_slice_fold_*.pth`` ensemble, scores test candidates with 3-slice
 context, runs MedSAM on the survivors, and writes
-``data/results/dice_final_report_three_slice_context.csv``.
+``outputs/msd_implementation/three_slice_context/metrics/dice_final_report_three_slice_context.csv``.
 
 Usage (from repo root):
     python -m msd_implementation.pipelines.three_slice_context.evaluate
@@ -34,6 +34,7 @@ MEDSAM_DIR = ROOT / "MedSAM"
 if MEDSAM_DIR.is_dir() and str(MEDSAM_DIR) not in sys.path:
     sys.path.insert(0, str(MEDSAM_DIR))
 
+from colab.drive_paths import output_dir
 from MedSAM.MedSAM_Inference import medsam_inference
 from MedSAM.segment_anything import sam_model_registry
 
@@ -51,9 +52,10 @@ from msd_implementation.pipelines.three_slice_context.slice_stack import stack_3
 
 
 CHECKPOINT_PREFIX = "three_slice_fold"
-THRESH_TXT = "optimal_threshold_three_slice_context.txt"
-THRESH_JSON = "optimal_threshold_three_slice_context.json"
-OUT_CSV = "data/results/dice_final_report_three_slice_context.csv"
+METRICS_DIR = output_dir("msd_implementation", "three_slice_context", "metrics")
+THRESH_TXT = METRICS_DIR / "optimal_threshold_three_slice_context.txt"
+THRESH_JSON = METRICS_DIR / "optimal_threshold_three_slice_context.json"
+OUT_CSV = METRICS_DIR / "dice_final_report_three_slice_context.csv"
 
 
 def calculate_dice(mask_true, mask_pred):
@@ -67,7 +69,7 @@ def calculate_dice(mask_true, mask_pred):
 def load_threshold_and_config():
     threshold_override = os.environ.get("RESNET_THRESHOLD_OVERRIDE")
 
-    if os.path.exists(THRESH_JSON):
+    if THRESH_JSON.exists():
         with open(THRESH_JSON, "r") as f:
             data = json.load(f)
         threshold = float(data["threshold"])
@@ -78,7 +80,7 @@ def load_threshold_and_config():
             print(f"Override RESNET_THRESHOLD_OVERRIDE : {threshold:.2f}")
         return threshold, cfg
 
-    if os.path.exists(THRESH_TXT):
+    if THRESH_TXT.exists():
         with open(THRESH_TXT, "r") as f:
             threshold = float(f.read().strip())
         print(f"Seuil 3-slice charge depuis {THRESH_TXT} : {threshold:.2f}")
@@ -109,7 +111,7 @@ dino_model = init_detector(
 )
 
 ensemble_models = []
-checkpoint_dir = get_resnet_checkpoint_dir()
+checkpoint_dir = get_resnet_checkpoint_dir("three_slice_context")
 print(f"Chargement des checkpoints ResNet 3-slice depuis : {checkpoint_dir.resolve()}")
 for i in range(1, 6):
     model = models.resnet18(weights=None)
@@ -142,7 +144,6 @@ with open(os.path.join(base_dir, "test.json"), "r") as f:
     test_images_list = json.load(f)["images"]
 
 results_list = []
-os.makedirs("data/results", exist_ok=True)
 print(
     f"\nDebut de l'evaluation finale 3-slice sur {len(test_images_list)} images..."
 )

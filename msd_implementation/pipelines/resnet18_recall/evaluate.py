@@ -16,10 +16,15 @@ from tqdm import tqdm
 from mmdet.apis import init_detector, inference_detector
 from mmdet.utils import register_all_modules
 
-MEDSAM_DIR = Path(__file__).resolve().parent / "MedSAM"
+ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+MEDSAM_DIR = ROOT / "MedSAM"
 if MEDSAM_DIR.is_dir() and str(MEDSAM_DIR) not in sys.path:
     sys.path.insert(0, str(MEDSAM_DIR))
 
+from colab.drive_paths import output_dir
 from MedSAM.MedSAM_Inference import medsam_inference
 from MedSAM.segment_anything import sam_model_registry
 
@@ -35,6 +40,12 @@ from msd_implementation.pipelines.common.proposal_strategy import (
 )
 
 
+METRICS_DIR = output_dir("msd_implementation", "resnet18_recall", "metrics")
+OUT_CSV = METRICS_DIR / "dice_final_report_resnet18_recall.csv"
+THRESH_JSON = METRICS_DIR / "optimal_threshold_resnet18.json"
+THRESH_TXT = METRICS_DIR / "optimal_threshold_resnet18.txt"
+
+
 def calculate_dice(mask_true, mask_pred):
     m_true = np.asarray(mask_true).astype(bool)
     m_pred = np.asarray(mask_pred).astype(bool)
@@ -46,21 +57,21 @@ def calculate_dice(mask_true, mask_pred):
 def load_threshold_and_config():
     threshold_override = os.environ.get("RESNET_THRESHOLD_OVERRIDE")
 
-    if os.path.exists("optimal_threshold_resnet18.json"):
-        with open("optimal_threshold_resnet18.json", "r") as f:
+    if THRESH_JSON.exists():
+        with open(THRESH_JSON, "r") as f:
             data = json.load(f)
         threshold = float(data["threshold"])
         cfg = ProposalConfig(**data.get("proposal_config", {}))
-        print(f"Seuil charge depuis optimal_threshold_resnet18.json : {threshold:.2f}")
+        print(f"Seuil charge depuis {THRESH_JSON} : {threshold:.2f}")
         if threshold_override is not None:
             threshold = float(threshold_override)
             print(f"Override RESNET_THRESHOLD_OVERRIDE : {threshold:.2f}")
         return threshold, cfg
 
-    if os.path.exists("optimal_threshold_resnet18.txt"):
-        with open("optimal_threshold_resnet18.txt", "r") as f:
+    if THRESH_TXT.exists():
+        with open(THRESH_TXT, "r") as f:
             threshold = float(f.read().strip())
-        print(f"Seuil charge depuis optimal_threshold_resnet18.txt : {threshold:.2f}")
+        print(f"Seuil charge depuis {THRESH_TXT} : {threshold:.2f}")
         if threshold_override is not None:
             threshold = float(threshold_override)
             print(f"Override RESNET_THRESHOLD_OVERRIDE : {threshold:.2f}")
@@ -85,7 +96,7 @@ dino_model = init_detector(
 )
 
 ensemble_models = []
-checkpoint_dir = get_resnet_checkpoint_dir()
+checkpoint_dir = get_resnet_checkpoint_dir("resnet18_recall")
 print(f"Chargement des checkpoints ResNet depuis : {checkpoint_dir.resolve()}")
 for i in range(1, 6):
     model = models.resnet18(weights=None)
@@ -112,7 +123,6 @@ with open(os.path.join(base_dir, "test.json"), "r") as f:
     test_images_list = json.load(f)["images"]
 
 results_list = []
-os.makedirs("data/results", exist_ok=True)
 print(f"\nDebut de l'evaluation finale recall sur {len(test_images_list)} images...")
 
 for img_info in tqdm(test_images_list, desc="Inference Test"):
@@ -203,7 +213,7 @@ for img_info in tqdm(test_images_list, desc="Inference Test"):
 
 # --- Bilan ---
 df = pd.DataFrame(results_list)
-df.to_csv("data/results/dice_final_report_resnet18_recall.csv", index=False)
+df.to_csv(OUT_CSV, index=False)
 
 df_tumor = df[df["has_tumor"] == True]
 df_no_tumor = df[df["has_tumor"] == False]
@@ -231,5 +241,5 @@ if not df_no_tumor.empty:
     fp_count = len(df_no_tumor[df_no_tumor["final_dice"] == 0.0])
     print(f"Faux Positifs : {fp_count} / {len(df_no_tumor)}")
 
-print("\nCSV : data/results/dice_final_report_resnet18_recall.csv")
+print(f"\nCSV : {OUT_CSV}")
 print("=" * 50)

@@ -11,10 +11,10 @@ Le 3-slice (canaux `(prev, curr, next)`) est conservé : il a déjà prouvé son
 
 | Notebook | Script appelé | Sortie |
 |---|---|---|
-| `01_extract_v2.ipynb` | `experiments.three_slice_v2.extract_v2` | `data/classifier_dataset_3slice_v2/{train,val}/{0,1}/*.png` |
-| `02_train_v2.ipynb` | `experiments.three_slice_v2.train_v2` | `resnet50_3slice_fold_{1..5}.pth` (sur Drive) |
-| `03_calibrate_v2.ipynb` | `experiments.three_slice_v2.calibrate_v2` | `optimal_threshold_3slice_v2.{txt,json}` |
-| `04_test_v2.ipynb` | `experiments.three_slice_v2.test_v2` | `data/results/dice_final_report_msd_recall_3slice_v2.csv` |
+| `01_extract_hard_negatives.ipynb` | `msd_implementation.pipelines.resnet50_wide_crop.extract_hard_negatives` | `outputs/msd_implementation/resnet50_wide_crop/datasets/classifier_dataset_resnet50_wide_crop/{train,val}/{0,1}/*.png` |
+| `02_train_classifier.ipynb` | `msd_implementation.pipelines.resnet50_wide_crop.train_classifier` | `outputs/msd_implementation/resnet50_wide_crop/checkpoints/resnet50_wide_crop_fold_{1..5}.pth` |
+| `03_calibrate_threshold.ipynb` | `msd_implementation.pipelines.resnet50_wide_crop.calibrate_threshold` | `outputs/msd_implementation/resnet50_wide_crop/metrics/optimal_threshold_resnet50_wide_crop.{txt,json}` |
+| `04_evaluate.ipynb` | `msd_implementation.pipelines.resnet50_wide_crop.evaluate` | `outputs/msd_implementation/resnet50_wide_crop/metrics/dice_final_report_resnet50_wide_crop.csv` |
 
 ## Ordre recommandé
 
@@ -33,6 +33,6 @@ Le 3-slice (canaux `(prev, curr, next)`) est conservé : il a déjà prouvé son
 ## Comparaison
 
 Une fois `04` terminé, compare les 3 CSV :
-- `dice_final_report_msd_recall.csv` (2D baseline)
-- `dice_final_report_msd_recall_3slice.csv` (3-slice v1)
-- `dice_final_report_msd_recall_3slice_v2.csv` (3-slice v2)
+- `outputs/msd_implementation/resnet18_recall/metrics/dice_final_report_resnet18_recall.csv`
+- `outputs/msd_implementation/three_slice_context/metrics/dice_final_report_three_slice_context.csv`
+- `outputs/msd_implementation/resnet50_wide_crop/metrics/dice_final_report_resnet50_wide_crop.csv`

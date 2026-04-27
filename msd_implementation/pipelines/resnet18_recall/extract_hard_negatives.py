@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 from mmdet.apis import init_detector, inference_detector
 
+from colab.drive_paths import output_dir
 from msd_implementation.pipelines.common.proposal_strategy import (
     ProposalConfig,
     box_tumor_overlap,
@@ -38,7 +39,12 @@ dino_checkpoint = "work_dirs/tumor_config_v3/best_coco_bbox_mAP_epoch_25.pth"
 dino_model = init_detector(dino_config, dino_checkpoint, device=device)
 
 base_dir = "data/MSD_pancreas"
-output_base_dir = "data/classifier_dataset_resnet18"
+output_base_dir = output_dir(
+    "msd_implementation",
+    "resnet18_recall",
+    "datasets",
+    "classifier_dataset_resnet18",
+)
 
 # Mining volontairement plus large que le runtime. Le ResNet doit apprendre a
 # rejeter les faux candidats que DINO propose a bas seuil, sinon il devient un

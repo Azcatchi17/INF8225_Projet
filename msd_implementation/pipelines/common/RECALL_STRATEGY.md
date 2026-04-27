@@ -29,11 +29,11 @@ python test_gd_msd_final_recall.py
 
 Fichiers de sortie utiles :
 
-- `optimal_threshold.txt` : seuil ResNet a utiliser en test.
-- `optimal_threshold.json` : seuil, metriques validation et configuration de propositions.
-- `data/results/calibration_threshold_multi_candidate.csv` : diagnostic validation.
-- `data/results/threshold_sweep_multi_candidate.csv` : sweep validation des seuils ResNet.
-- `data/results/dice_final_report_msd_recall.csv` : diagnostic test final, avec cause des FN.
+- `outputs/msd_implementation/resnet18_recall/metrics/optimal_threshold_resnet18.txt` : seuil ResNet a utiliser en test.
+- `outputs/msd_implementation/resnet18_recall/metrics/optimal_threshold_resnet18.json` : seuil, metriques validation et configuration de propositions.
+- `outputs/msd_implementation/resnet18_recall/metrics/calibration_threshold_multi_candidate.csv` : diagnostic validation.
+- `outputs/msd_implementation/resnet18_recall/metrics/threshold_sweep_multi_candidate.csv` : sweep validation des seuils ResNet.
+- `outputs/msd_implementation/resnet18_recall/metrics/dice_final_report_resnet18_recall.csv` : diagnostic test final, avec cause des FN.
 
 Dans un notebook, tu peux lancer le test final avec :
 

@@ -13,6 +13,7 @@ from tqdm import tqdm
 from mmdet.apis import init_detector, inference_detector
 from mmdet.utils import register_all_modules
 
+from colab.drive_paths import output_dir
 from msd_implementation.pipelines.common.proposal_strategy import (
     ProposalConfig,
     ensure_3c,
@@ -43,6 +44,11 @@ PROPOSAL_CFG = ProposalConfig(
 F_BETA = 2.0
 MAX_FP_RATE = 0.25
 MIN_RECALL = 0.90
+METRICS_DIR = output_dir("msd_implementation", "resnet18_recall", "metrics")
+OUT_CSV = METRICS_DIR / "calibration_threshold_multi_candidate.csv"
+OUT_SWEEP = METRICS_DIR / "threshold_sweep_multi_candidate.csv"
+OUT_TXT = METRICS_DIR / "optimal_threshold_resnet18.txt"
+OUT_JSON = METRICS_DIR / "optimal_threshold_resnet18.json"
 
 # --- Modeles ---
 dino_model = init_detector(
@@ -52,7 +58,7 @@ dino_model = init_detector(
 )
 
 ensemble_models = []
-checkpoint_dir = get_resnet_checkpoint_dir()
+checkpoint_dir = get_resnet_checkpoint_dir("resnet18_recall")
 print(f"Chargement des checkpoints ResNet depuis : {checkpoint_dir.resolve()}")
 print("Chargement de l'ensemble ResNet-18 (5 modeles)...")
 for i in range(1, 6):
@@ -131,8 +137,7 @@ df = pd.DataFrame(
         for row in rows
     ]
 )
-os.makedirs("data/results", exist_ok=True)
-df.to_csv("data/results/calibration_threshold_multi_candidate.csv", index=False)
+df.to_csv(OUT_CSV, index=False)
 
 optimal_thresh, best_metrics, sweep = find_best_threshold(
     rows,
@@ -141,7 +146,7 @@ optimal_thresh, best_metrics, sweep = find_best_threshold(
     min_recall=MIN_RECALL,
     n_thresholds=99,
 )
-pd.DataFrame(sweep).to_csv("data/results/threshold_sweep_multi_candidate.csv", index=False)
+pd.DataFrame(sweep).to_csv(OUT_SWEEP, index=False)
 
 print("\n" + "=" * 58)
 print("RECHERCHE DU SEUIL OPTIMAL MULTI-CANDIDATS")
@@ -169,10 +174,10 @@ for metrics in sweep:
             "R={recall:.2f} P={precision:.2f} F2={f_beta:.3f}".format(**metrics)
         )
 
-with open("optimal_threshold_resnet18.txt", "w") as f:
+with open(OUT_TXT, "w") as f:
     f.write(f"{optimal_thresh:.2f}")
 
-with open("optimal_threshold_resnet18.json", "w") as f:
+with open(OUT_JSON, "w") as f:
     json.dump(
         {
             "threshold": optimal_thresh,
@@ -187,6 +192,6 @@ with open("optimal_threshold_resnet18.json", "w") as f:
         indent=2,
     )
 
-print("\nSauvegarde : optimal_threshold_resnet18.txt, optimal_threshold_resnet18.json")
-print("Details candidats : data/results/calibration_threshold_multi_candidate.csv")
-print("Sweep seuils : data/results/threshold_sweep_multi_candidate.csv")
+print(f"\nSauvegarde : {OUT_TXT}, {OUT_JSON}")
+print(f"Details candidats : {OUT_CSV}")
+print(f"Sweep seuils : {OUT_SWEEP}")

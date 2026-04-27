@@ -40,14 +40,14 @@ def write_run_summary(state: AgentState) -> Path:
 
 
 def save_masks(state: AgentState) -> list[Path]:
-    """Write each iteration's binary mask as a PNG under agent_results."""
-    config.AGENT_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    """Write each iteration's binary mask as a PNG under the Gemini masks folder."""
+    config.AGENT_MASKS_DIR.mkdir(parents=True, exist_ok=True)
     img_stem = Path(state.image_path).stem
     paths = []
     for it in state.iterations:
         if it.mask is None:
             continue
-        out = config.AGENT_RESULTS_DIR / f"mask_{img_stem}_iter_{it.iteration:02d}.png"
+        out = config.AGENT_MASKS_DIR / f"mask_{img_stem}_iter_{it.iteration:02d}.png"
         Image.fromarray((it.mask * 255).astype(np.uint8)).save(out)
         paths.append(out)
     return paths

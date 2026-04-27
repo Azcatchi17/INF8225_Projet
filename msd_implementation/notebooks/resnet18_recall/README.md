@@ -19,7 +19,7 @@ Recommended order:
 
 Notes:
 
-- The setup cell clones/pulls `GIT_REF = "main"` into `/content/INF8225_Projet` by default.
+- The setup cell clones/pulls `GIT_REF = "clean-structure"` into `/content/INF8225_Projet` by default.
 - `colab/setup.py` mounts Drive, installs the OpenMMLab stack, and symlinks heavy assets.
 - Keep `INSTALL_DEPS=True` for the first notebook in a fresh runtime. You can set it to `False` in later notebooks if the same runtime is still alive.
 - The hard-negative dataset must be regenerated with notebook `01` for the recall strategy; do not reuse an older `classifier_dataset_hard` extracted with the previous top-1 pipeline.

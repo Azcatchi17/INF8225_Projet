@@ -6,10 +6,10 @@ Pipeline parallèle à `colab_msd_recall/`, où chaque patch utilisé par le Res
 
 | Notebook | Script appelé | Sortie |
 |---|---|---|
-| `01_extract_3slice.ipynb` | `experiments.three_slice.extract_hard_negatives_3slice` | `data/classifier_dataset_3slice/{train,val}/{0,1}/*.png` |
-| `02_train_3slice.ipynb` | `experiments.three_slice.train_resnet_3slice` | `resnet_3slice_fold_{1..5}.pth` (sur Drive) |
-| `03_calibrate_3slice.ipynb` | `experiments.three_slice.calibrate_threshold_3slice` | `optimal_threshold_3slice.{txt,json}` |
-| `04_test_3slice.ipynb` | `experiments.three_slice.test_recall_3slice` | `data/results/dice_final_report_msd_recall_3slice.csv` |
+| `01_extract_hard_negatives.ipynb` | `msd_implementation.pipelines.three_slice_context.extract_hard_negatives` | `outputs/msd_implementation/three_slice_context/datasets/classifier_dataset_three_slice/{train,val}/{0,1}/*.png` |
+| `02_train_classifier.ipynb` | `msd_implementation.pipelines.three_slice_context.train_classifier` | `outputs/msd_implementation/three_slice_context/checkpoints/three_slice_fold_{1..5}.pth` |
+| `03_calibrate_threshold.ipynb` | `msd_implementation.pipelines.three_slice_context.calibrate_threshold` | `outputs/msd_implementation/three_slice_context/metrics/optimal_threshold_three_slice_context.{txt,json}` |
+| `04_evaluate.ipynb` | `msd_implementation.pipelines.three_slice_context.evaluate` | `outputs/msd_implementation/three_slice_context/metrics/dice_final_report_three_slice_context.csv` |
 
 ## Ordre recommandé
 
@@ -25,4 +25,4 @@ Pipeline parallèle à `colab_msd_recall/`, où chaque patch utilisé par le Res
 
 ## Comparaison
 
-Une fois `04` terminé, compare `data/results/dice_final_report_msd_recall.csv` (2D) et `data/results/dice_final_report_msd_recall_3slice.csv` (3-slice) — par exemple avec un script local ou un notebook séparé.
+Une fois `04` terminé, compare les CSV sous `outputs/msd_implementation/resnet18_recall/metrics/` et `outputs/msd_implementation/three_slice_context/metrics/` — par exemple avec un script local ou un notebook séparé.

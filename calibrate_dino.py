@@ -8,6 +8,8 @@ from skimage import io
 from tqdm import tqdm
 from mmdet.apis import init_detector, inference_detector
 
+from colab.drive_paths import output_dir
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Appareil detecte : {device}")
 
@@ -118,6 +120,32 @@ for t in thresholds_to_test:
     print(f"{t:<12.2f} | {tp:<22} | {fn:<12} | {fp:<30}")
 print("="*65)
 
+metrics_dir = output_dir("msd_implementation", "dino_calibration", "metrics")
+sweep_path = metrics_dir / "dino_threshold_sweep_legacy.csv"
+summary_path = metrics_dir / "dino_calibration_summary_legacy.json"
+
+pd.DataFrame(
+    [{"threshold": threshold, **metrics} for threshold, metrics in results.items()]
+).to_csv(sweep_path, index=False)
+
+min_fn = min(metrics["fn"] for metrics in results.values())
+recommended_threshold = max(
+    threshold for threshold, metrics in results.items() if metrics["fn"] == min_fn
+)
+with open(summary_path, "w") as f:
+    json.dump(
+        {
+            "recommended_threshold": recommended_threshold,
+            "selection_rule": "highest_threshold_with_minimum_fn",
+            "minimum_fn": min_fn,
+            "results": {str(threshold): metrics for threshold, metrics in results.items()},
+        },
+        f,
+        indent=2,
+    )
+
 print("\nAnalyse :")
 print("1. Regarde la colonne 'Ratées (FN)'. Cherche le seuil le plus HAUT qui garde ce nombre à son strict minimum (idéalement 0 ou proche des ratés inévitables de DINO).")
 print("2. Vérifie la colonne 'Faux Positifs'. Ce chiffre correspond aux futures images 'Classe 0' de ton dataset ResNet. Plus il est haut, plus l'entraînement ResNet sera long.")
+print(f"\nCSV : {sweep_path}")
+print(f"Resume JSON : {summary_path}")

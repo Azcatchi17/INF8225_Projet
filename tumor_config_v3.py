@@ -138,4 +138,4 @@ custom_hooks = [
 ]
 
 # Poids de base pour un nouveau départ sain
-load_from = 'grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth'
+load_from = 'models_weights/grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth'

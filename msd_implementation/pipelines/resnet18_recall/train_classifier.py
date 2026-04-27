@@ -7,16 +7,16 @@ import torch.optim as optim
 import torchvision.models as models
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader
-import os
 import numpy as np
 from sklearn.metrics import precision_recall_curve # NOUVEL IMPORT
 
+from colab.drive_paths import output_dir
 from msd_implementation.pipelines.common.proposal_strategy import get_resnet_checkpoint_dir
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Entrainement Multi-Seed Ensemble (Optimisé Recall) sur : {device}")
 
-checkpoint_dir = get_resnet_checkpoint_dir()
+checkpoint_dir = get_resnet_checkpoint_dir("resnet18_recall")
 checkpoint_dir.mkdir(parents=True, exist_ok=True)
 print(f"Checkpoints ResNet sauvegardes dans : {checkpoint_dir.resolve()}")
 
@@ -71,8 +71,14 @@ val_transforms = transforms.Compose([
 ])
 
 # 2. Chargement Datasets
-train_dir = "data/classifier_dataset_resnet18/train"
-val_dir = "data/classifier_dataset_resnet18/val"
+dataset_dir = output_dir(
+    "msd_implementation",
+    "resnet18_recall",
+    "datasets",
+    "classifier_dataset_resnet18",
+)
+train_dir = dataset_dir / "train"
+val_dir = dataset_dir / "val"
 
 train_dataset = datasets.ImageFolder(train_dir, transform=train_transforms)
 val_dataset = datasets.ImageFolder(val_dir, transform=val_transforms)

@@ -30,13 +30,14 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from colab.drive_paths import output_dir
 from msd_implementation.pipelines.common.proposal_strategy import get_resnet_checkpoint_dir
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Entrainement Multi-Seed Ensemble 3-slice v2 (ResNet-50) sur : {device}")
 
-checkpoint_dir = get_resnet_checkpoint_dir()
+checkpoint_dir = get_resnet_checkpoint_dir("resnet50_wide_crop")
 checkpoint_dir.mkdir(parents=True, exist_ok=True)
 print(f"Checkpoints ResNet-50 3-slice sauvegardes dans : {checkpoint_dir.resolve()}")
 
@@ -52,8 +53,14 @@ NUM_WORKERS = 2
 CHECKPOINT_PREFIX = "resnet50_wide_crop_fold"
 THRESHOLD_PREFIX = "threshold_resnet50_wide_crop_run"
 
-TRAIN_DIR = "data/classifier_dataset_resnet50_wide_crop/train"
-VAL_DIR = "data/classifier_dataset_resnet50_wide_crop/val"
+DATASET_DIR = output_dir(
+    "msd_implementation",
+    "resnet50_wide_crop",
+    "datasets",
+    "classifier_dataset_resnet50_wide_crop",
+)
+TRAIN_DIR = DATASET_DIR / "train"
+VAL_DIR = DATASET_DIR / "val"
 
 
 def set_seed(seed: int) -> None:

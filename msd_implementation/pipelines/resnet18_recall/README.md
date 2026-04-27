@@ -11,10 +11,10 @@ needs to reject.
 | Step | Module | Output |
 |------|--------|--------|
 | 0 | `calibrate_detector` | DINO threshold sweep on validation |
-| 1 | `extract_hard_negatives` | `data/classifier_dataset_resnet18/{train,val}/{0,1}/*.png` |
+| 1 | `extract_hard_negatives` | `outputs/msd_implementation/resnet18_recall/datasets/classifier_dataset_resnet18/{train,val}/{0,1}/*.png` |
 | 2 | `train_classifier` | `resnet18_recall_fold_{1..5}.pth` |
-| 3 | `calibrate_threshold` | `optimal_threshold_resnet18.{txt,json}` |
-| 4 | `evaluate` | `data/results/dice_final_report_resnet18_recall.csv` |
+| 3 | `calibrate_threshold` | `outputs/msd_implementation/resnet18_recall/metrics/optimal_threshold_resnet18.{txt,json}` |
+| 4 | `evaluate` | `outputs/msd_implementation/resnet18_recall/metrics/dice_final_report_resnet18_recall.csv` |
 
 ## Running from the repo root
 

@@ -2,7 +2,7 @@
 
 Each saved patch is a 3-channel stack of {prev, curr, next} slices instead
 of a 3-channel-replicated grayscale. The output dataset lives in a parallel
-folder (`data/classifier_dataset_three_slice/`) so the original 2D dataset is
+folder (`outputs/msd_implementation/three_slice_context/datasets/classifier_dataset_three_slice/`) so the original 2D dataset is
 preserved.
 
 Usage (from repo root):
@@ -30,6 +30,7 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from colab.drive_paths import output_dir
 from msd_implementation.pipelines.common.proposal_strategy import (
     ProposalConfig,
     box_tumor_overlap,
@@ -55,7 +56,12 @@ dino_checkpoint = "work_dirs/tumor_config_v3/best_coco_bbox_mAP_epoch_25.pth"
 dino_model = init_detector(dino_config, dino_checkpoint, device=device)
 
 base_dir = "data/MSD_pancreas"
-output_base_dir = "data/classifier_dataset_three_slice"
+output_base_dir = output_dir(
+    "msd_implementation",
+    "three_slice_context",
+    "datasets",
+    "classifier_dataset_three_slice",
+)
 
 MINING_CFG = ProposalConfig(
     tumor_score_thresh=0.01,
