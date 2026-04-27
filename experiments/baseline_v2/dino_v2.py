@@ -3,7 +3,6 @@
 Mirrors test_msd_no_resnet.py (collaborator's reference) while reusing the
 cached model loader and bf16 fallback from agentic/dino_gemini_msd/.
 
-The key difference vs agentic/dino_gemini_msd/grounding_dino.py is that
 `detect_with_labels` returns the `labels` tensor so the caller can split
 pancreas (label 0) from tumor (label 1) when the prompt is
 "pancreas . tumor .".
