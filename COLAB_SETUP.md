@@ -30,7 +30,7 @@ Projet_Medsam/                                         ← Drive folder
 
 If your shortcut lands at a different path, pass it explicitly:
 ```python
-from colab.setup import setup
+from experiments.colab_setup import setup
 setup(drive_folder="/content/drive/MyDrive/some/other/path")
 ```
 
@@ -44,11 +44,12 @@ Notebooks with a Colab bootstrap cell already wired:
 
 | Notebook | Purpose | Needs GPU? | Colab-ready |
 |---|---|---|---|
-| `grounding_dino.ipynb` | detection inference with fine-tuned DINO | **yes** | yes |
-| `segment_kvasir.ipynb` | MedSAM segmentation using GT bboxes | **yes** | yes |
-| `test_gd.ipynb` | full DINO → MedSAM eval pipeline | **yes** | yes |
-| `analyze_kvasir.ipynb` | post-hoc analysis of `dice_*.csv` | CPU OK | — |
-| `convert_to_coco.ipynb` | COCO split generation (run once) | CPU OK | — |
+| `notebooks/kvasir/segment_oracle.ipynb` | Kvasir MedSAM oracle segmentation | **yes** | yes |
+| `notebooks/msd/dino_medsam_cascade/baseline.ipynb` | MSD DINO + MedSAM cascade baseline | **yes** | yes |
+| `experiments/msd/dino_medsam_cascade/improved_pipeline.ipynb` | archived MSD improved-pipeline run | **yes** | yes |
+| `notebooks/msd/resnet50_wide_crop/04_evaluate.ipynb` | final MSD ResNet-50 verifier evaluation | **yes** | yes |
+| `notebooks/msd/resnet50_wide_crop/05_publication_figures.ipynb` | publication figures from final CSV | CPU OK | yes |
+| `notebooks/exploratory/convert_to_coco.ipynb` | COCO split generation (run once) | CPU OK | — |
 
 The bootstrap cell at the top of each Colab-ready notebook:
 1. Clones this repo into `/content/INF8225_Projet` (if not already there) and `cd`s into it.
@@ -60,7 +61,7 @@ The bootstrap cell at the top of each Colab-ready notebook:
    - `scipy==1.13.1`
    - `matplotlib==3.8.4`
 4. Installs `mmengine==0.10.7`, `mmcv==2.2.0`, and `mmdet==3.3.0` from prebuilt wheels only.
-5. Installs the small extras from `colab/requirements-colab.txt` (`transformers`, `nltk`, `pycocotools`, ...).
+5. Installs the small extras from `requirements-colab.txt` (`transformers`, `nltk`, `pycocotools`, ...).
 6. Mounts Drive, locates the project folder, creates symlinks so the notebook code (which uses paths like `data/Kvasir-SEG/...` and `work_dirs/polyp_config/...`) finds everything on Drive unchanged.
 
 ## Repairing a stale Colab runtime
@@ -69,7 +70,7 @@ If a previous session left `numpy` / `scipy` in a bad state and the notebook sti
 `from mmdet.apis import init_detector, inference_detector`, force a clean reinstall once:
 
 ```python
-from colab.setup import setup
+from experiments.colab_setup import setup
 setup(reinstall=True)
 ```
 
