@@ -22,7 +22,7 @@ configs/
 
 The trained checkpoints for these configs live under `work_dirs/`
 (gitignored) and are typically symlinked from a Drive folder via
-`experiments/colab_setup.py`. Iteration scripts reference the runtime config copy
+`notebooks/colab_setup.py`. Iteration scripts reference the runtime config copy
 that MMDet writes alongside the checkpoint:
 ```python
 init_detector("work_dirs/tumor_config_v3/tumor_config_v3.py", ckpt_path)

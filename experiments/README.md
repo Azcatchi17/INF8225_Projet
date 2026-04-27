@@ -1,18 +1,16 @@
 # Experiments
 
-Source code for every experimental iteration, plus the Colab bootstrap
-helper used by the notebooks. Lightweight orchestration notebooks live
-under `../notebooks/`; the archived full MSD improved-pipeline run lives
-next to its iteration code.
+Source code for every experimental iteration. Lightweight orchestration
+notebooks and the Colab bootstrap helper live under `../notebooks/`.
 
 ## Layout
 
 ```
 experiments/
-├── colab_setup.py                   # Colab bootstrap and Drive symlinks
 ├── kvasir/                          # Polyp segmentation proof-of-concept
 └── msd/                             # MSD-Pancreas tumour pipeline
     ├── _shared/                     # Common utilities (proposal logic)
+    ├── dino_gemini_msd/             # DINO/MedSAM/Gemini support code for MSD
     ├── dino_medsam_cascade/         # Iter 1: DINO + MedSAM with anatomical cascade
     ├── resnet18_recall/             # Iter 2: ResNet-18 ensemble + hard negative mining
     ├── three_slice_context/         # Iter 3: 3-slice channel input
@@ -28,7 +26,7 @@ without interfering.
 
 All scripts are designed to be invoked as Python modules from the repo
 root, after the heavy assets have been symlinked into `data/` and
-`work_dirs/` (see `experiments/colab_setup.py`).
+`work_dirs/` (see `notebooks/colab_setup.py`).
 
 ```bash
 # From the repo root
@@ -40,9 +38,6 @@ python -m experiments.msd.resnet50_wide_crop.evaluate
 
 The matching Colab notebooks live in
 `notebooks/msd/resnet50_wide_crop/`.
-
-The preserved full improved-pipeline notebook is stored at
-`experiments/msd/dino_medsam_cascade/improved_pipeline.ipynb`.
 
 ## Module dependency graph
 

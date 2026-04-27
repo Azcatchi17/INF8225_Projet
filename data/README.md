@@ -26,7 +26,7 @@ data/
 
 ## How to populate
 
-On Colab the `experiments/colab_setup.py` helper symlinks both datasets from a
+On Colab the `notebooks/colab_setup.py` helper symlinks both datasets from a
 shared Google Drive folder. Locally, place the data manually under
 `data/MSD_pancreas/` and `data/Kvasir-SEG/` following the structure
 expected by the COCO JSON files.

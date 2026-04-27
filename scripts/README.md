@@ -23,5 +23,5 @@ Standalone utilities that are not part of any single iteration.
   cascade-only evaluator from before the ResNet verifier; kept as a
   reproducibility record. The current cascade lives at
   `experiments/msd/dino_medsam_cascade/evaluation.py`.
-- `scripts/evaluate/msd_runtime.py` — runtime helpers for the agentic
-  segmentation experiments (preserved for completeness).
+- `scripts/evaluate/msd_runtime.py` — runtime helpers for the early
+  Gemini-refinement segmentation experiments (preserved for completeness).

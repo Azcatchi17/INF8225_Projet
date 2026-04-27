@@ -1,7 +1,7 @@
 """P2.2 + P2.3 helpers: box padding and mask post-processing.
 
 Kept in the experiments folder so we can sweep parameters without touching
-`agentic/dino_gemini_msd/medsam.py` (which is already branched on
+`experiments/msd/dino_gemini_msd/medsam.py` (which is already branched on
 `config.POSTPROCESS_MASK`).
 """
 from __future__ import annotations

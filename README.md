@@ -39,17 +39,17 @@ INF8225_Projet/
 ├── src/inf8225_project/       # reserved for shared library code (TBD)
 │
 ├── experiments/               # experiment code and reproducible run helpers
-│   ├── colab_setup.py          # Colab bootstrap used by notebooks
 │   ├── kvasir/
 │   └── msd/
 │       ├── _shared/
+│       ├── dino_gemini_msd/          # MSD DINO/MedSAM/Gemini support code
 │       ├── dino_medsam_cascade/      # iter 1
-│       │   └── improved_pipeline.ipynb
 │       ├── resnet18_recall/          # iter 2
 │       ├── three_slice_context/      # iter 3
 │       └── resnet50_wide_crop/       # iter 4 (final)
 │
 ├── notebooks/                 # Colab orchestration notebooks
+│   ├── colab_setup.py          # Colab bootstrap used by notebooks
 │   ├── kvasir/
 │   └── msd/
 │       ├── dino_medsam_cascade/
@@ -95,7 +95,7 @@ pip install -r requirements.txt
 ```
 
 Heavy assets (DINO, MedSAM, MSD pancreas dataset) are not committed.
-On Colab, `experiments/colab_setup.py` symlinks them from a Drive folder; locally
+On Colab, `notebooks/colab_setup.py` symlinks them from a Drive folder; locally
 you have to provide them yourself.
 
 ## Reproducing the paper's table

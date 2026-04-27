@@ -1,7 +1,8 @@
 """Baseline runner using label-aware cascade + MedSAM.
 
-Reads the cached MedSAM wrapper from agentic/ so the image encoder / bf16
-path stays identical — only the DINO-side logic changes.
+Reads the cached MedSAM wrapper from `experiments.msd.dino_gemini_msd`
+so the image encoder / bf16 path stays identical — only the DINO-side
+logic changes.
 """
 from __future__ import annotations
 
@@ -15,9 +16,9 @@ import pandas as pd
 from PIL import Image
 from tqdm.auto import tqdm
 
-from agentic.dino_gemini_msd import config as _cfg
-from agentic.dino_gemini_msd import medsam
-from agentic.dino_gemini_msd import metrics as M
+from experiments.msd.dino_gemini_msd import config as _cfg
+from experiments.msd.dino_gemini_msd import medsam
+from experiments.msd.dino_gemini_msd import metrics as M
 
 from .cascade_detector import LabeledBox, cascade_select_tumor_box
 from .postprocess import pad_box, postprocess_mask as _postprocess_mask

@@ -1,7 +1,7 @@
 # Minimal deps for running the project notebooks on Google Colab.
 # Colab already ships torch, torchvision, numpy, pandas, matplotlib,
 # scikit-image, scikit-learn, opencv-python, Pillow, tqdm.
-# mmengine / mmcv / mmdet are installed separately in experiments/colab_setup.py because
+# mmengine / mmcv / mmdet are installed separately in notebooks/colab_setup.py because
 # their wheels must match Colab's exact torch+cuda+python combo.
 #
 # transformers>=4.38 is the first release with cp312 wheels (via tokenizers>=0.15)
@@ -14,6 +14,6 @@ addict
 yapf
 shapely
 terminaltables
-# Agentic pipeline (Gemma via Google AI Studio)
+# Gemini-assisted segmentation pipeline
 google-genai>=0.3.0
 pydantic>=2.5.0

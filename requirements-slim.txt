@@ -1,6 +1,6 @@
 # Direct dependencies of the project. The full frozen local environment lives in
 # `requirements.txt`; Colab-only extras live in `requirements-colab.txt` and are
-# installed by `experiments/colab_setup.py`. This file is the minimal set of
+# installed by `notebooks/colab_setup.py`. This file is the minimal set of
 # packages a contributor needs to read or run the iteration code.
 
 # Core scientific stack

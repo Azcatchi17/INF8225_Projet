@@ -8,6 +8,7 @@ one iteration script via `python -m experiments.msd.<iter>.<step>`.
 
 ```
 notebooks/
+├── colab_setup.py              # Colab dependency pinning + Drive symlinks
 ├── kvasir/                     # Polyp proof-of-concept notebooks
 ├── msd/                        # MSD-Pancreas iterations (one folder per iter)
 │   ├── dino_medsam_cascade/    # Iter 1: baseline cascade

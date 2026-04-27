@@ -30,7 +30,7 @@ Projet_Medsam/                                         ← Drive folder
 
 If your shortcut lands at a different path, pass it explicitly:
 ```python
-from experiments.colab_setup import setup
+from notebooks.colab_setup import setup
 setup(drive_folder="/content/drive/MyDrive/some/other/path")
 ```
 
@@ -46,7 +46,7 @@ Notebooks with a Colab bootstrap cell already wired:
 |---|---|---|---|
 | `notebooks/kvasir/segment_oracle.ipynb` | Kvasir MedSAM oracle segmentation | **yes** | yes |
 | `notebooks/msd/dino_medsam_cascade/baseline.ipynb` | MSD DINO + MedSAM cascade baseline | **yes** | yes |
-| `experiments/msd/dino_medsam_cascade/improved_pipeline.ipynb` | archived MSD improved-pipeline run | **yes** | yes |
+| `notebooks/msd/dino_medsam_cascade/improved_pipeline.ipynb` | archived MSD improved-pipeline run | **yes** | yes |
 | `notebooks/msd/resnet50_wide_crop/04_evaluate.ipynb` | final MSD ResNet-50 verifier evaluation | **yes** | yes |
 | `notebooks/msd/resnet50_wide_crop/05_publication_figures.ipynb` | publication figures from final CSV | CPU OK | yes |
 | `notebooks/exploratory/convert_to_coco.ipynb` | COCO split generation (run once) | CPU OK | — |
@@ -70,7 +70,7 @@ If a previous session left `numpy` / `scipy` in a bad state and the notebook sti
 `from mmdet.apis import init_detector, inference_detector`, force a clean reinstall once:
 
 ```python
-from experiments.colab_setup import setup
+from notebooks.colab_setup import setup
 setup(reinstall=True)
 ```
 

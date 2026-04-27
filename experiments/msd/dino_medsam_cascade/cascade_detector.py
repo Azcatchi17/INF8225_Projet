@@ -1,7 +1,7 @@
 """Label-aware Grounding DINO wrapper + pancreas→tumor cascade.
 
 Mirrors test_msd_no_resnet.py while reusing the
-cached model loader and bf16 fallback from agentic/dino_gemini_msd/.
+cached model loader and bf16 fallback from experiments/msd/dino_gemini_msd/.
 
 `detect_with_labels` returns the `labels` tensor so the caller can split
 pancreas (label 0) from tumor (label 1) when the prompt is
@@ -15,8 +15,8 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 
-from agentic.dino_gemini_msd import config as _base_config
-from agentic.dino_gemini_msd.models import get_dino_model
+from experiments.msd.dino_gemini_msd import config as _base_config
+from experiments.msd.dino_gemini_msd.models import get_dino_model
 
 # tumor_config_v3 metainfo: classes=('pancreas', 'tumor')
 PANCREAS_LABEL = 0

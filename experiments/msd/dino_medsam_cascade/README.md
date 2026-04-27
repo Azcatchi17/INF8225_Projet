@@ -23,8 +23,9 @@ python -c "from experiments.msd.dino_medsam_cascade.evaluation import run_baseli
 The notebook `notebooks/msd/dino_medsam_cascade/baseline.ipynb` provides
 the same call wired in a Colab-friendly cell layout.
 
-`improved_pipeline.ipynb` preserves the full MSD Colab run used for the
-UNet-gated DINO + MedSAM ablation and threshold calibration.
+`notebooks/msd/dino_medsam_cascade/improved_pipeline.ipynb` preserves
+the full MSD Colab run used for the UNet-gated DINO + MedSAM ablation
+and threshold calibration.
 
 ## Key parameters
 
