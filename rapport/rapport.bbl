@@ -20,11 +20,6 @@ Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun.
 \newblock Deep residual learning for image recognition.
 \newblock {\em IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}, pages 770--778, 2016.
 
-\bibitem[\protect\citeauthoryear{He \bgroup \em et al.\egroup }{2017}]{he2017maskrcnn}
-Kaiming He, Georgia Gkioxari, Piotr Doll{\'a}r, and Ross Girshick.
-\newblock Mask {R}-{CNN}.
-\newblock In {\em International Conference on Computer Vision (ICCV)}, 2017.
-
 \bibitem[\protect\citeauthoryear{Isensee \bgroup \em et al.\egroup }{2021}]{isensee2021nnunet}
 Fabian Isensee, Paul~F. Jaeger, Simon A.~A. Kohl, Jens Petersen, and Klaus~H. Maier-Hein.
 \newblock {nnU}-{N}et: a self-configuring method for deep learning-based biomedical image segmentation.

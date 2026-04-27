@@ -1,6 +1,6 @@
 """Label-aware Grounding DINO wrapper + pancreas→tumor cascade.
 
-Mirrors test_msd_no_resnet.py (collaborator's reference) while reusing the
+Mirrors test_msd_no_resnet.py while reusing the
 cached model loader and bf16 fallback from agentic/dino_gemini_msd/.
 
 `detect_with_labels` returns the `labels` tensor so the caller can split

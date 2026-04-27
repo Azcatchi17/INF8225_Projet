@@ -3,44 +3,44 @@ Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: rapport.aux
 The style file: named.bst
 Database file #1: ijcai19.bib
-You've used 17 entries,
+You've used 16 entries,
             2439 wiz_defined-function locations,
-            633 strings with 7435 characters,
-and the built_in function-call counts, 7558 in all, are:
-= -- 773
-> -- 395
+            630 strings with 7337 characters,
+and the built_in function-call counts, 7168 in all, are:
+= -- 738
+> -- 372
 < -- 7
-+ -- 140
-- -- 138
-* -- 591
-:= -- 1234
-add.period$ -- 51
-call.type$ -- 17
-change.case$ -- 132
-chr.to.int$ -- 17
-cite$ -- 17
-duplicate$ -- 297
-empty$ -- 476
-format.name$ -- 155
-if$ -- 1556
++ -- 132
+- -- 130
+* -- 561
+:= -- 1170
+add.period$ -- 48
+call.type$ -- 16
+change.case$ -- 124
+chr.to.int$ -- 16
+cite$ -- 16
+duplicate$ -- 280
+empty$ -- 445
+format.name$ -- 146
+if$ -- 1476
 int.to.chr$ -- 1
 int.to.str$ -- 0
-missing$ -- 17
-newline$ -- 88
-num.names$ -- 51
-pop$ -- 116
+missing$ -- 16
+newline$ -- 83
+num.names$ -- 48
+pop$ -- 105
 preamble$ -- 1
-purify$ -- 149
+purify$ -- 140
 quote$ -- 0
-skip$ -- 274
+skip$ -- 263
 stack$ -- 0
-substring$ -- 331
-swap$ -- 97
+substring$ -- 326
+swap$ -- 94
 text.length$ -- 7
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 136
+type$ -- 128
 warning$ -- 0
-while$ -- 57
-width$ -- 21
-write$ -- 216
+while$ -- 55
+width$ -- 20
+write$ -- 204

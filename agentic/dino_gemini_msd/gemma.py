@@ -1,4 +1,4 @@
-"""Gemma wrapper: prompt refinement (text) + mask analysis (multimodal).
+"""Gemini wrapper: prompt refinement (text) + mask analysis (multimodal).
 
 Uses google-genai SDK against Google AI Studio. The API surface here is
 intentionally tiny: two methods, both returning pydantic-validated dicts.

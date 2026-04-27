@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2024.6.13)  25 APR 2026 14:08
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2024.6.13)  27 APR 2026 04:25
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -346,26 +346,26 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 \actualheight=\skip58
 
-Underfull \hbox (badness 1117) in paragraph at lines 39--56
+Underfull \hbox (badness 1117) in paragraph at lines 39--59
 \OT1/ptm/m/it/10 prompt-able \OT1/ptm/m/n/10 (\OT1/ptm/m/it/10 Med-SAM\OT1/ptm/m/n/10 ). Cette cha[]^^Pne at-teint un
  []
 
 
-Underfull \hbox (badness 3930) in paragraph at lines 60--73
+Underfull \hbox (badness 1097) in paragraph at lines 39--59
+\OT1/ptm/m/n/10 mesur[]ees []a l'[]etape pr[]ec[]edente. Agents mul-ti-
+ []
+
+
+Underfull \hbox (badness 3930) in paragraph at lines 63--76
 \OT1/ptm/m/n/10 comme \OT1/ptm/m/it/10 U-Net [] []\OT1/ptm/m/n/10 Ron-neberger \OT1/ptm/m/it/10 et al.\OT1/ptm/m/n/10 , 2015[][] puis \OT1/ptm/m/it/10 nnU-
  []
 
 
-Underfull \hbox (badness 1418) in paragraph at lines 60--73
+Underfull \hbox (badness 1418) in paragraph at lines 63--76
 \OT1/ptm/m/n/10 Cette ex-i-gence reste un frein op[]erationnel, et plusieurs
  []
 
 
-
-
-Underfull \hbox (badness 4673) in paragraph at lines 113--119
-[]\OT1/ptm/m/n/10 L'utilisation d'agents mul-ti-modaux pour raf-finer les
- []
 
 
 
@@ -374,206 +374,198 @@ Underfull \hbox (badness 4673) in paragraph at lines 113--119
 
 
 ]
-LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 146.
- (/Users/moradbelmelih/Library/TinyTeX/texmf-dist/tex/latex/psnfss/ot1pcr.fd
+Underfull \hbox (badness 4673) in paragraph at lines 116--123
+[]\OT1/ptm/m/n/10 L'utilisation d'agents mul-ti-modaux pour raf-finer les
+ []
+
+LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 150.
+(/Users/moradbelmelih/Library/TinyTeX/texmf-dist/tex/latex/psnfss/ot1pcr.fd
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 )
-Underfull \hbox (badness 1221) in paragraph at lines 144--150
+Underfull \hbox (badness 1221) in paragraph at lines 148--154
 \OT1/ptm/m/n/10 Pour fournir une r[]egion d'int[]er[]et anatomique, nous en-
  []
 
 
 
+<figures/kvasir/fig1.png, id=129, 467.8278pt x 308.352pt>
+File: figures/kvasir/fig1.png Graphic file (type png)
+<use figures/kvasir/fig1.png>
+Package pdftex.def Info: figures/kvasir/fig1.png  used on input line 221.
+(pdftex.def)             Requested size: 243.91125pt x 160.76741pt.
 
-Underfull \hbox (badness 1701) in paragraph at lines 210--222
+
+[2]
+Underfull \hbox (badness 2012) in paragraph at lines 260--268
+[]\OT1/ptm/m/n/10 Apr[]es \OT1/ptm/m/it/10 fine-tuning \OT1/ptm/m/n/10 de \OT1/ptm/m/it/10 Ground-ing DINO \OT1/ptm/m/n/10 sur la classe
+ []
+
+
+Underfull \hbox (badness 1701) in paragraph at lines 271--283
 \OT1/ptm/m/n/10 Le pas-sage []a \OT1/ptm/m/it/10 MSD Pan-creas \OT1/ptm/m/n/10 in-tro-duit deux dif-fi-cult[]es.
  []
 
 
-Underfull \hbox (badness 7203) in paragraph at lines 210--222
+Underfull \hbox (badness 7203) in paragraph at lines 271--283
 \OT1/ptm/m/n/10 D'abord, la classe \OT1/pcr/m/n/10 tumor \OT1/ptm/m/n/10 n'appartient pas au vo-
  []
 
 
-Underfull \hbox (badness 2503) in paragraph at lines 210--222
+Underfull \hbox (badness 2503) in paragraph at lines 271--283
 \OT1/ptm/m/n/10 cab-u-laire per-ti-nent du \OT1/ptm/m/it/10 check-point \OT1/ptm/m/n/10 pr[]e-entra[]^^Pn[]e \OT1/pcr/m/n/10 swin-T
  []
 
 
-Underfull \hbox (badness 1163) in paragraph at lines 223--234
-\OT1/ptm/m/n/10 mais la sp[]ecificit[]e tombe []a 0,17 parce que \OT1/ptm/m/it/10 DINO \OT1/ptm/m/n/10 pro-
- []
-
-
-
-[2]
-Underfull \hbox (badness 10000) in paragraph at lines 267--275
-\OT1/ptm/m/n/10 La premi[]ere id[]ee que nous ex-plorons est de de-
- []
-
-
-Underfull \hbox (badness 5050) in paragraph at lines 267--275
-\OT1/ptm/m/n/10 man-der []a un mod[]ele mul-ti-modal ex-terne de v[]erifier
- []
-
-
-Underfull \hbox (badness 5077) in paragraph at lines 267--275
-\OT1/ptm/m/n/10 ou de cor-riger les bo[]^^Ptes dou-teuses. Le note-book
- []
-
-
-Underfull \hbox (badness 3536) in paragraph at lines 267--275
-\OT1/pcr/m/n/10 agentic[]segmentation[]msd.ipynb \OT1/ptm/m/n/10 branche \OT1/ptm/m/it/10 Gem-
+Underfull \hbox (badness 1789) in paragraph at lines 284--295
+\OT1/ptm/m/n/10 canon-ique en con-ser-vant la bo[]^^Pte tumeur de plus haut
  []
 
 
 
 
-Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 307.
 
-
-Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\rightarrow' on input line 307.
-
-
-Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 307.
-
-
-Underfull \hbox (badness 2326) in paragraph at lines 309--318
+[3 <./figures/kvasir/fig1.png>]
+Underfull \hbox (badness 2326) in paragraph at lines 368--381
 \OT1/ptm/m/n/10 L'observation pr[]ec[]edente sugg[]ere d'[]eviter le co[]ut d'un
  []
 
+<figures/msd/fig6_iterations_comparison.pdf, id=160, 501.04497pt x 210.06383pt>
+File: figures/msd/fig6_iterations_comparison.pdf Graphic file (type pdf)
+<use figures/msd/fig6_iterations_comparison.pdf>
+Package pdftex.def Info: figures/msd/fig6_iterations_comparison.pdf  used on input line 395.
+(pdftex.def)             Requested size: 505.89pt x 212.09868pt.
 
-Underfull \hbox (badness 10000) in paragraph at lines 335--348
-[]\OT1/ptm/m/n/10 Le pipeline fi-nal, doc-u-ment[]e dans
- []
-
-
-Underfull \hbox (badness 1102) in paragraph at lines 335--348
-\OT1/ptm/m/n/10 per-mis-sif que pr[]ec[]edemment afin de ne pas sac-ri-fier la
- []
-
-
-Underfull \hbox (badness 3364) in paragraph at lines 335--348
-\OT1/ptm/m/n/10 Les prob-a-bilit[]es sont agr[]eg[]ees par moyenne p[]enalis[]ee
- []
-
-
-Underfull \hbox (badness 2680) in paragraph at lines 349--360
-[]\OT1/ptm/m/n/10 La qualit[]e de cette d[]ecision re-pose enti[]erement sur
- []
-
-
-Underfull \hbox (badness 1931) in paragraph at lines 349--360
-\OT1/ptm/m/n/10 le jeu d'entra[]^^Pnement du clas-si-fieur. Si l'on se con-
- []
-
-
-Underfull \hbox (badness 5592) in paragraph at lines 349--360
-\OT1/ptm/m/n/10 tentait de posi-tifs et de n[]egatifs choi-sis au hasard,
- []
-
-
-Underfull \hbox (badness 3701) in paragraph at lines 349--360
-\OT1/ptm/m/n/10 le ResNet ap-prendrait des in-dices triv-i-aux comme la
- []
-
-
-Underfull \hbox (badness 1142) in paragraph at lines 349--360
-\OT1/ptm/m/n/10 n'attaquerait pas le probl[]eme r[]eel des hal-lu-ci-na-tions de
- []
-
-
-Underfull \hbox (badness 1552) in paragraph at lines 349--360
-\OT1/ptm/m/it/10 DINO\OT1/ptm/m/n/10 . Nous []echantillonnons donc les n[]egatifs durs en
- []
-
-
-
-[3]
-Underfull \hbox (badness 10000) in paragraph at lines 368--375
-\OT1/ptm/m/n/10 Les seuils \OT1/ptm/m/it/10 per-fold \OT1/ptm/m/n/10 obtenus pen-dant l'entra[]^^Pnement
- []
-
-
-Underfull \hbox (badness 1629) in paragraph at lines 368--375
-\OT1/ptm/m/n/10 les cinq r[]eseaux ap-pren-nent des d[]ecisions sen-si-ble-ment
- []
-
-
-Underfull \hbox (badness 1354) in paragraph at lines 408--415
-\OT1/ptm/m/n/10 ment, le mod[]ele transf[]er[]e en \OT1/ptm/m/it/10 zero-shot \OT1/ptm/m/n/10 ne d[]epasse pas
+Underfull \hbox (badness 1281) in paragraph at lines 429--437
+\OT1/ptm/m/n/10 em-pi-lons trois coupes ad-ja-centes \OT1/pcr/m/n/10 (slice-1, slice,
  []
 
 
 
 
-Underfull \hbox (badness 1655) in paragraph at lines 453--459
-[]\OT1/ptm/m/n/10 Enfin, l'ensemble des \OT1/ptm/m/it/10 check-points \OT1/ptm/m/n/10 (DINO v3, U-Net
+Underfull \hbox (badness 2790) in paragraph at lines 446--459
+\OT1/ptm/m/n/10 ResNet-18 est rem-plac[]e par ResNet-50 Im-a-geNet pr[]e-
  []
 
-(./rapport.bbl
-Underfull \vbox (badness 1902) has occurred while \output is active []
+<figures/msd/fig4_confusion_dice.pdf, id=163, 482.18593pt x 195.1684pt>
+File: figures/msd/fig4_confusion_dice.pdf Graphic file (type pdf)
+<use figures/msd/fig4_confusion_dice.pdf>
+Package pdftex.def Info: figures/msd/fig4_confusion_dice.pdf  used on input line 470.
+(pdftex.def)             Requested size: 505.89pt x 204.77203pt.
+
+Underfull \hbox (badness 3354) in paragraph at lines 496--509
+ []\OT1/ptm/b/n/10 Plateau de per-for-mance.[] \OT1/ptm/m/n/10 Notre pipeline fi-nal at-teint
+ []
+
+
+Underfull \hbox (badness 3895) in paragraph at lines 496--509
+\OT1/ptm/m/n/10 F1=0,78, AUC=0,82. Au-del[]a, le com-pro-mis sen-si-
+ []
 
 
 
 [4]
-Underfull \hbox (badness 4713) in paragraph at lines 24--27
-[]\OT1/ptm/m/n/10 Kaiming He, Geor-gia Gkioxari, Pi-otr
+<figures/msd/fig5_patient_profile.pdf, id=174, 499.85387pt x 297.18486pt>
+File: figures/msd/fig5_patient_profile.pdf Graphic file (type pdf)
+<use figures/msd/fig5_patient_profile.pdf>
+Package pdftex.def Info: figures/msd/fig5_patient_profile.pdf  used on input line 521.
+(pdftex.def)             Requested size: 505.89pt x 300.77557pt.
+
+Underfull \hbox (badness 1418) in paragraph at lines 548--557
+\OT1/ptm/m/n/10 L'utilisation de \OT1/ptm/m/it/10 prompts \OT1/ptm/m/n/10 n[]egatifs tels que ``\OT1/pcr/m/n/10 no tumor\OT1/ptm/m/n/10 ''
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 34--37
+Underfull \vbox (badness 5504) has occurred while \output is active []
+
+
+
+
+Underfull \hbox (badness 1590) in paragraph at lines 568--576
+[]\OT1/ptm/m/it/10 Mining de posi-tifs durs cibl[]e. \OT1/ptm/m/n/10 Notre min-ing actuel
+ []
+
+
+
+[5 <./figures/msd/fig6_iterations_comparison.pdf>]
+Underfull \hbox (badness 1540) in paragraph at lines 586--596
+\OT1/ptm/m/n/10 ad-ja-centes con-traire-ment aux hal-lu-ci-na-tions. Une sim-
+ []
+
+
+Underfull \hbox (badness 1038) in paragraph at lines 586--596
+\OT1/ptm/m/n/10 ple agr[]egation \OT1/ptm/m/it/10 multi-slice \OT1/ptm/m/n/10 au mo-ment de la d[]ecision fi-
+ []
+
+
+Underfull \hbox (badness 1199) in paragraph at lines 586--596
+\OT1/ptm/m/n/10 ailleurs, le \OT1/ptm/m/it/10 split \OT1/ptm/m/n/10 50/50 du test a []et[]e con-struit pour fa-
+ []
+
+
+Underfull \hbox (badness 3179) in paragraph at lines 598--605
+ []\OT1/ptm/b/n/10 Reproductibilit[]e et co[]ut.[] \OT1/ptm/m/n/10 L'ensemble des \OT1/ptm/m/it/10 check-points
+ []
+
+
+
+(./rapport.bbl
+
+[6 <./figures/msd/fig4_confusion_dice.pdf>]
+Underfull \hbox (badness 10000) in paragraph at lines 29--32
 []\OT1/ptm/m/n/10 Alexander Kir-illov, Eric Mintun,
  []
 
 
-Underfull \hbox (badness 1087) in paragraph at lines 54--57
+
+
+Underfull \hbox (badness 1087) in paragraph at lines 49--52
 \OT1/ptm/m/it/10 put-ing and Computer-Assisted In-ter-ven-tion (MIC-CAI)\OT1/ptm/m/n/10 ,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 64--67
+Underfull \hbox (badness 10000) in paragraph at lines 59--62
 []\OT1/ptm/m/n/10 Abhinav Shri-vas-tava, Ab-hi-nav
  []
 
 
-Underfull \hbox (badness 4001) in paragraph at lines 69--72
+Underfull \hbox (badness 4001) in paragraph at lines 64--67
 []\OT1/ptm/m/n/10 Gemini Team.  Gem-ini: A fam-ily of
  []
 
 
-Underfull \hbox (badness 2229) in paragraph at lines 69--72
+Underfull \hbox (badness 2229) in paragraph at lines 64--67
 \OT1/ptm/m/n/10 highly ca-pa-ble mul-ti-modal mod-els.  \OT1/ptm/m/it/10 arXiv preprint
  []
 
 
 
-)
+[7 <./figures/msd/fig5_patient_profile.pdf>])
 
-[5] (./rapport.aux)
+
+
+[8
+
+] (./rapport.aux)
  ***********
 LaTeX2e <2024-06-01>
 L3 programming layer <2024-05-27>
  ***********
 Package rerunfilecheck Info: File `rapport.out' has not changed.
-(rerunfilecheck)             Checksum: 2C3B16DC85DB48A50AF10591CA13648D;3536.
+(rerunfilecheck)             Checksum: 9461B514B8E2D0A4FC7A726331178CE5;3999.
  ) 
 Here is how much of TeX's memory you used:
- 11353 strings out of 475560
- 180647 string characters out of 5777139
- 1955891 words of memory out of 5000000
- 33761 multiletter control sequences out of 15000+600000
- 594804 words of font info for 117 fonts, out of 8000000 for 9000
+ 11415 strings out of 475560
+ 182539 string characters out of 5777139
+ 1954891 words of memory out of 5000000
+ 33809 multiletter control sequences out of 15000+600000
+ 593708 words of font info for 115 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 75i,10n,79p,374b,543s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmib10.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on rapport.pdf (5 pages, 239587 bytes).
+ 75i,10n,79p,863b,545s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmib10.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></Users/moradbelmelih/Library/TinyTeX/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on rapport.pdf (8 pages, 350533 bytes).
 PDF statistics:
- 273 PDF objects out of 1000 (max. 8388607)
- 223 compressed objects within 3 object streams
- 46 named destinations out of 1000 (max. 500000)
- 137 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 328 PDF objects out of 1000 (max. 8388607)
+ 260 compressed objects within 3 object streams
+ 60 named destinations out of 1000 (max. 500000)
+ 173 words of extra memory for PDF output out of 10000 (max. 10000000)
 
