@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+title: "From Polyp Detection to Pancreatic Tumor Segmentation: Limits of Open-Vocabulary Detectors and the Role of a Learned Downstream Classifier"
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Bel-Melih"
+    given-names: "Morad"
+    affiliation: "Polytechnique Montréal"
+    email: "morad.bel-melih@polymtl.ca"
+  - family-names: "B."
+    given-names: "Paul"
+    affiliation: "Polytechnique Montréal"
+abstract: >-
+  We compose a fine-tuned Grounding DINO detector with MedSAM and a
+  ResNet-50 ensemble verifier to segment pancreatic tumors on 2D CT
+  slices from the Medical Segmentation Decathlon, without pixel
+  annotations at inference time. The work documents four successive
+  iterations of the verifier and shows how learned patch-level texture
+  features complement the open-vocabulary signal of the detector.
+keywords:
+  - "Grounding DINO"
+  - "MedSAM"
+  - "Medical Image Segmentation"
+  - "Pancreatic Cancer"
+  - "Open-Vocabulary Detection"
+  - "ResNet"
+license: MIT
+repository-code: "https://github.com/moradBMH/INF8225_Projet"
+version: "1.0.0"
+date-released: 2026-04-27
+type: software
