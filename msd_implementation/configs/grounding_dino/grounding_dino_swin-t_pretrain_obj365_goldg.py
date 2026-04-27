@@ -1,0 +1,1 @@
+../../models_weights/grounding_dino_swin-t_pretrain_obj365_goldg.py

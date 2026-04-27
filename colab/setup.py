@@ -32,6 +32,8 @@ SYMLINK_MAP = {
     "MedSAM/work_dir": "work_dir",
     "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth":
         "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth",
+    "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg.py":
+        "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg.py",
 }
 
 # Small config files are versioned in the repo but useful to mirror into Drive
@@ -447,6 +449,16 @@ def setup(
             drive_root / drive_rel,
             replace_existing=local_rel in REPLACE_WITH_SYMLINK,
         )
+
+    # Create a symlink for the DINO base config in the config directory
+    # so that pancreas_tumor.py can reference it with a relative path
+    dino_config_symlink = (
+        project_root / "msd_implementation" / "configs" / "grounding_dino" / 
+        "grounding_dino_swin-t_pretrain_obj365_goldg.py"
+    )
+    dino_config_source = project_root / "models_weights" / "grounding_dino_swin-t_pretrain_obj365_goldg.py"
+    if dino_config_source.exists():
+        _link(dino_config_symlink, dino_config_source, replace_existing=True)
 
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
