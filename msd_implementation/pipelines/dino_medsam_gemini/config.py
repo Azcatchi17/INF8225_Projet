@@ -9,7 +9,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 # Grounding DINO and MedSAM artefacts are symlinked into the repo by
 # colab/setup.py when running on Colab.
-DINO_CONFIG = PROJECT_ROOT / "work_dirs" / "tumor_config_v3" / "tumor_config_v3.py"
+DINO_CONFIG = (
+    PROJECT_ROOT
+    / "msd_implementation"
+    / "configs"
+    / "grounding_dino"
+    / "pancreas_tumor.py"
+)
 DINO_CHECKPOINT = (
     PROJECT_ROOT / "work_dirs" / "tumor_config_v3" / "best_coco_bbox_mAP_epoch_25.pth"
 )

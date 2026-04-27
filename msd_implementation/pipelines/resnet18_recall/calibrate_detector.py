@@ -18,11 +18,9 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Appareil detecte : {device}")
 
 # --- Chargement DINO ---
-dino_model = init_detector(
-    "work_dirs/tumor_config_v3/tumor_config_v3.py",
-    "work_dirs/tumor_config_v3/best_coco_bbox_mAP_epoch_25.pth",
-    device=device,
-)
+dino_config = "msd_implementation/configs/grounding_dino/pancreas_tumor.py"
+dino_checkpoint = "work_dirs/tumor_config_v3/best_coco_bbox_mAP_epoch_25.pth"
+dino_model = init_detector(dino_config, dino_checkpoint, device=device)
 
 # --- Donnees ---
 base_dir = "data/MSD_pancreas"

@@ -51,11 +51,9 @@ OUT_TXT = METRICS_DIR / "optimal_threshold_resnet18.txt"
 OUT_JSON = METRICS_DIR / "optimal_threshold_resnet18.json"
 
 # --- Modeles ---
-dino_model = init_detector(
-    "work_dirs/tumor_config_v3/tumor_config_v3.py",
-    "work_dirs/tumor_config_v3/best_coco_bbox_mAP_epoch_25.pth",
-    device=device,
-)
+dino_config = "msd_implementation/configs/grounding_dino/pancreas_tumor.py"
+dino_checkpoint = "work_dirs/tumor_config_v3/best_coco_bbox_mAP_epoch_25.pth"
+dino_model = init_detector(dino_config, dino_checkpoint, device=device)
 
 ensemble_models = []
 checkpoint_dir = get_resnet_checkpoint_dir("resnet18_recall")

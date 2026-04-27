@@ -1,4 +1,4 @@
-_base_ = 'grounding_dino_swin-t_pretrain_obj365_goldg.py'
+_base_ = '../../../models_weights/grounding_dino_swin-t_pretrain_obj365_goldg.py'
 
 data_root = 'data/MSD_pancreas/'
 

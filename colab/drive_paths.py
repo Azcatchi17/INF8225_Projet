@@ -43,7 +43,7 @@ REQUIRED_FILES = [
     "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg.py",
     "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg_*.pth",
     "work_dirs/polyp_config_v2/polyp_config_v2.py",
-    "work_dirs/tumor_config_v3/tumor_config_v3.py",
+    "work_dirs/tumor_config_v3/best_coco_bbox_mAP_epoch_25.pth",
 ]
 
 OUTPUT_PIPELINES = {

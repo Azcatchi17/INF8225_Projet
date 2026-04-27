@@ -39,8 +39,6 @@ SYMLINK_MAP = {
 COPY_TO_DRIVE_MAP = {
     "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg.py":
         "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg.py",
-    "tumor_config_v3.py":
-        "work_dirs/tumor_config_v3/tumor_config_v3.py",
     "kvasir_implementation/polyp_config_v2.py":
         "work_dirs/polyp_config_v2/polyp_config_v2.py",
 }
