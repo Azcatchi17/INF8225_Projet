@@ -30,7 +30,6 @@ DATA_DIRS = [
 ]
 
 WORK_DIRS = [
-    "work_dirs/polyp_config",
     "work_dirs/polyp_config_v2",
     "work_dirs/tumor_config_v3",
     "work_dirs/pancreas_unet",
@@ -42,8 +41,9 @@ REQUIRED_FILES = [
     "work_dir/MedSAM/medsam_vit_b.pth",
     "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg.py",
     "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg_*.pth",
-    "work_dirs/polyp_config_v2/polyp_config_v2.py",
+    "work_dirs/polyp_config_v2/best_coco_bbox_mAP_epoch_5.pth",
     "work_dirs/tumor_config_v3/best_coco_bbox_mAP_epoch_25.pth",
+    "work_dirs/pancreas_unet/best.pt",
 ]
 
 OUTPUT_PIPELINES = {

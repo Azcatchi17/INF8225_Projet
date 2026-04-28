@@ -187,7 +187,7 @@ if __name__ == "__main__":
         ckpt_path = os.path.join(PROJECT_ROOT, 'models_weights/grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth')
     else:
         print("\n=== MODE FINE-TUNED ACTIVÉ ===")
-        cfg_path = os.path.join(PROJECT_ROOT, 'work_dirs/polyp_config_v2/polyp_config_v2.py')
+        cfg_path = os.path.join(PROJECT_ROOT, 'kvasir_implementation/polyp_config_v2.py')
         ckpt_path = os.path.join(PROJECT_ROOT, 'work_dirs/polyp_config_v2/best_coco_bbox_mAP_epoch_5.pth')
 
     medsam_ckpt = os.path.join(PROJECT_ROOT, "MedSAM/work_dir/MedSAM/medsam_vit_b.pth")

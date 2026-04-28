@@ -30,31 +30,20 @@ SYMLINK_MAP = {
     "work_dirs": "work_dirs",
     "outputs": "outputs",
     "MedSAM/work_dir": "work_dir",
-    "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth":
-        "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg_20231122_132602-4ea751ce.pth",
-    "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg.py":
-        "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg.py",
+    "models_weights": "models_weights",
 }
 
-# Small config files are versioned in the repo but useful to mirror into Drive
-# so the shared folder remains self-describing.
-COPY_TO_DRIVE_MAP = {
-    "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg.py":
-        "models_weights/grounding_dino_swin-t_pretrain_obj365_goldg.py",
-    "kvasir_implementation/polyp_config_v2.py":
-        "work_dirs/polyp_config_v2/polyp_config_v2.py",
-}
+COPY_TO_DRIVE_MAP = {}
 
 REPLACE_WITH_SYMLINK = {
     "data",
     "work_dirs",
     "outputs",
     "MedSAM/work_dir",
+    "models_weights",
 }
 
-# Output subdirs the notebooks write to, relative to the Drive project folder.
 OUTPUT_SUBDIRS = [
-    "work_dirs/polyp_config",
     "work_dirs/polyp_config_v2",
     "work_dirs/tumor_config_v3",
     "work_dirs/pancreas_unet",
@@ -449,16 +438,6 @@ def setup(
             drive_root / drive_rel,
             replace_existing=local_rel in REPLACE_WITH_SYMLINK,
         )
-
-    # Create a symlink for the DINO base config in the config directory
-    # so that pancreas_tumor.py can reference it with a relative path
-    dino_config_symlink = (
-        project_root / "msd_implementation" / "configs" / "grounding_dino" / 
-        "grounding_dino_swin-t_pretrain_obj365_goldg.py"
-    )
-    dino_config_source = project_root / "models_weights" / "grounding_dino_swin-t_pretrain_obj365_goldg.py"
-    if dino_config_source.exists():
-        _link(dino_config_symlink, dino_config_source, replace_existing=True)
 
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
