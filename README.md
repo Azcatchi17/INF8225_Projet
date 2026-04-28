@@ -11,7 +11,7 @@ Le projet utilise un **Drive partagé** (`Shared Drive`) comme source unique pou
 > **Le dossier doit apparaître dans vos Drives partagés sous le nom exact `Projet_Medsam`.**
 
 Pour y accéder :
-1. Demandez l'accès au Drive partagé auprès d'un membre de l'équipe.
+1. Ouvrez le lien du Drive partagé : <https://drive.google.com/drive/folders/1YtHe53jMv_iCys98jEVSTVTWMeBkopb2?usp=share_link>
 2. Vérifiez que le dossier est visible dans **Google Drive → Drives partagés → Projet_Medsam**.
 3. Sur Colab, le dossier sera monté automatiquement à `/content/drive/Shareddrives/Projet_Medsam`.
 
