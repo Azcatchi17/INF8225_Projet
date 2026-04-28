@@ -123,10 +123,10 @@ def _find_drive_folder(explicit: str | None) -> Path:
         if c.exists():
             return c
     raise FileNotFoundError(
-        "\nProject folder not found under /content/drive/MyDrive.\n"
+        "\nProject folder not found under /content/drive/Shareddrives.\n"
         f"1. Open {DRIVE_FOLDER_URL}\n"
-        "2. Click 'Add shortcut to Drive' → 'My Drive'.\n"
-        "   or pass the path explicitly: setup(drive_folder='/content/drive/MyDrive/your_folder')\n"
+        "2. Click 'Add shortcut to Drive' → 'Shared drives'.\n"
+        "   or pass the path explicitly: setup(drive_folder='/content/drive/Shareddrives/your_folder')\n"
     )
 
 

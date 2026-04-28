@@ -18,10 +18,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 DRIVE_CANDIDATES = [
+    Path("/content/drive/Shareddrives/Projet_Medsam"),
+    Path("/content/drive/Shareddrives/INF8225_Projet"),
+    Path("/content/drive/Shareddrives/INF8225"),
     Path("/content/drive/MyDrive/Projet_Medsam"),
-    Path("/content/drive/MyDrive/INF8225_Projet"),
-    Path("/content/drive/MyDrive/INF8225"),
-    Path("/content/drive/MyDrive/Colab Notebooks/Projet_Medsam"),
 ]
 
 DATA_DIRS = [
